@@ -25,14 +25,12 @@ The above paper computes the PDE analytically using series expansions.
 
 Below, we show how this system can be easily solved using PINN and the NeuralPDE.jl package!
 =#
-using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, DomainSets, GalacticOptim
+using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, DomainSets
 using Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
 
-include("utils/general_utils.jl")
+include("utils/callback_func.jl")
 
-# -----------------------------------------------------------------------
-# set up the problem!
 @parameters t x
 @variables u1(..) u2(..)
 
@@ -45,9 +43,9 @@ eqns = [Dt(u1(t,x)) ~ Dxx(u1(t,x)) - u2(t,x)*Dx(u1(t,x)) + (u1(t,x))^2 - 2*Ix((u
         0 ~ Dx(u2(t,x)) - u1(t,x)]
 
 bcs = [u1(0,x) ~ cos(π*x),
-        Dx(u1(t,0)) ~ 0,
-        Dx(u1(t,1)) ~ 0,
-        u2(t,0) ~ 0,
+        Dx(u1(t,0)) ~ Dx(u1(t,1)),
+        Dx(u1(t,1)) ~ u2(t,0),
+        u2(t,0) ~ u2(t,1),
         u2(t,1) ~ 0
 ]
 
@@ -56,8 +54,6 @@ domains = [x ∈ Interval(0.0, 1.0),
 
 @named pde_sys = PDESystem(eqns, bcs, domains, [t,x], [u1(t,x), u2(t,x)])
 
-# -----------------------------------------------------------------------
-# Initialize neural network and discretization of space
 dim = length(domains) # number of dimensions
 n = 15
 chains = [Lux.Chain(
@@ -69,8 +65,6 @@ strategy = QuadratureTraining()
 discretization = PhysicsInformedNN(chains, strategy)
 @time prob = discretize(pde_sys, discretization)
 
-# -----------------------------------------------------------------------
-# Traing the network and record loss
 # parameters for callback
 i = 0
 loss_history = []
@@ -89,12 +83,8 @@ loss3_history = loss_history
 loss_history = vcat(loss1_history, loss2_history, loss3_history)
 phi = discretization.phi
 
-# save to files
-save_training_files("trained_networks/integro_PDE")
-
-# -----------------------------------------------------------------------
 ## Analysis
-u_analytic(t,x) = [exp((-π^2)*t)*cos(π*x), (1/π)*exp((-π^2)*t)*sin(π*x)]
+u_analytic(t,x) = [exp(-π^2 * t) * cos(π*x), (1/π) * exp(-π^2 * x)]
 
 dx = 0.1
 xs,ts = [infimum(d.domain):dx/10:supremum(d.domain) for d in domains]
@@ -113,17 +103,12 @@ for i in 1:length(chains)
     title!("\$u_{$(i)}(t,x)\$, analytic")
     plt3 = plot(xs, ts, diff_u[i], linetype=:contourf, xlabel=L"t", ylabel=L"x")
     title!("Difference")
-    plot(plt1, plt2, plt3, dpi=300)
+    plot(plt1, plt2, plt3, dpi=200)
     savefig("plots/integro_PDE/plot_u$i.png")
 end
 
-# Plot loss
-plot(1:length(loss_history), loss_history, 
-            xlabel="Epoch", ylabel="Loss", size=(400,400), 
-            yaxis=:log, label="", dpi=300)
-plot!(1:length(loss1_history), loss1_history, label="Learning rate = 0.1")
-plot!((length(loss1_history)+1):(length(loss1_history)+length(loss2_history)), 
-        loss2_history, label="Learning rate = 0.01")
-plot!((length(loss1_history)+length(loss2_history)+1):(length(loss1_history)+length(loss2_history)+length(loss3_history)),
-        loss3_history, label="Learning rate = 0.001")
+plt = plot(1:length(loss_history), loss_history)
+xlabel!("Epoch")
+ylabel!("Loss")
+plot(plt)
 savefig("plots/integro_PDE/loss.png")
