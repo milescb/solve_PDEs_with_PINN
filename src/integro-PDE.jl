@@ -43,9 +43,9 @@ eqns = [Dt(u1(t,x)) ~ Dxx(u1(t,x)) - u2(t,x)*Dx(u1(t,x)) + (u1(t,x))^2 - 2*Ix((u
         0 ~ Dx(u2(t,x)) - u1(t,x)]
 
 bcs = [u1(0,x) ~ cos(π*x),
-        Dx(u1(t,0)) ~ Dx(u1(t,1)),
-        Dx(u1(t,1)) ~ u2(t,0),
-        u2(t,0) ~ u2(t,1),
+        Dx(u1(t,0)) ~ 0,
+        Dx(u1(t,1)) ~ 0,
+        u2(t,0) ~ 0,
         u2(t,1) ~ 0
 ]
 

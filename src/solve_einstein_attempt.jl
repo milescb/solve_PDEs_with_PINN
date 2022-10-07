@@ -4,13 +4,14 @@ Date: Fall 2022
 
 Solve Einstein's fields equations to obtain the Schwarzschild metric. 
 =#
-using NeuralPDE, ModelingToolkit, Optimization, Flux, OptimizationOptimisers
-import ModelingToolkit: Interval, infimum, supremum
+using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers
+using JLD2
 
 include("utils/utils_einstein.jl")
+include("utils/general_utils.jl")
 
 # A collection of constants to be used 
-const n = 4 # number of dimensions in problem
+n = 4 # number of dimensions in problem
 const G = 6.67e-11 # m²/kg²
 const c = 3e8 # m/s²
 M = 1.989e30 #kg
@@ -67,11 +68,11 @@ bcs = [#g01(τ,ρ,θ,ϕ) ~ 0,
         g22(τ,ρ,θ,ϕ) ~ -ρ^2,
         g33(τ,ρ,θ,ϕ) ~ -ρ^2 * (sin(θ))^2,
         # try to match newtonian gravity
-        g00(τ,1e8,0,0) ~ newton_limit(ρ),
-        g11(τ,1e8,0,0) ~ newton_limit(ρ)
+        g00(τ,6e6,0,0) ~ newton_limit(ρ),
+        g11(τ,6e6,0,0) ~ newton_limit(ρ)
 ]
 
-domains = [τ ∈ Interval(0, 100.0),
+domains = [τ ∈ Interval(0, 10.0),
             ρ ∈ Interval(6e6, 1e8),
             θ ∈ Interval(0, π),
             ϕ ∈ Interval(0, 2π)]
@@ -80,33 +81,23 @@ domains = [τ ∈ Interval(0, 100.0),
 #@named pde_sys = PDESystem(eqns, bcs, domains, [τ, ρ, θ, ϕ], vars_complete)
 
 dim = length(domains) # number of dimensions
-activation = tanh
-chains = [Chain(Dense(dim, 128, activation), 
-            Dense(128, 128, activation),
-            Dense(128, 64, activation),
-            Dense(64, 32, activation), 
-            Dense(32, 16, activation),
-            Dense(16, 1)) for _ in 1:4]
+activation = Lux.σ
+chains = [Lux.Chain(Lux.Dense(dim, 32, activation), 
+            Lux.Dense(32, 16, activation),
+            Lux.Dense(16, 1)) for _ in 1:4]
 
 strategy = QuadratureTraining()
 discretization = PhysicsInformedNN(chains, strategy)
 @time prob = discretize(pde_sys, discretization)
 
 i = 0
-callback = function (p,l)
-    global i += 1
-    #if i % 1 == 0
-    println("Current loss is: $l")
-    #end
-    return false
-end
+loss_history = []
 
-res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(0.1); callback = callback, maxiters=5)
+res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(1.0); callback = callback, maxiters=5)
 prob = remake(prob, u0=res.minimizer)
 res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(0.01); callback = callback, maxiters=2000)
 # prob = remake(prob,u0=res.minimizer)
 # res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(0.0001); callback = callback, maxiters=5000)
 phi = discretization.phi
 
-## Evaluate solution
-τs, ρs, θs, ϕs = [domain.domain.lower:0.01:domain.domain.upper for domain in domains]
+save_training_files("trained_networks/EFE_simple")
