@@ -29,7 +29,7 @@ using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, Dom
 using Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
 
-include("utils/callback_func.jl")
+include("utils/general_utils.jl")
 
 @parameters t x
 @variables u1(..) u2(..)
