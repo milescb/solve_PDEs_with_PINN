@@ -1,4 +1,4 @@
-name = "solve_einstein_with_NeuralPDE"
+name = "solve_PDEs_with_PINN"
 uuid = "9e0ce94c-82da-4746-8e47-2eddf2eac392"
 authors = ["Miles Cochran-Branson <mcochranbranson@gmail.com>"]
 version = "0.1.0"
