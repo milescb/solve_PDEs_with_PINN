@@ -152,6 +152,9 @@ function Ricci(i::Int, j::Int, inverse)
     return eqn
 end
 
+"""
+
+"""
 function Γ_simplified(c::Int, a::Int, b::Int) 
     eqn = 0
     for d in 0:(n-1)
@@ -170,6 +173,8 @@ function Γ_simplified(c::Int, a::Int, b::Int)
     return 0.5 * eqn
 end
 
+"""
+"""
 function Ricci_simplified(i::Int, j::Int)
     eqn = 0
     for a in 0:(n-1)
@@ -196,6 +201,41 @@ function Ricci_simplified(i::Int, j::Int)
             if typeof(temp3)==Num && typeof(temp)==Num
                 eqn -= temp3*temp
             end
+        end
+    end
+    return eqn
+end
+
+function Γ_simplified2(c::Int, a::Int, b::Int, vars::Any) 
+    eqn = 0
+    for d in 0:(n-1)
+        if c == d
+            eqn += (diff_vec_1[a+1](vars[tensor_to_vector(b,d)]) + 
+                        diff_vec_1[b+1](vars[tensor_to_vector(a,d)]) + 
+                            diff_vec_1[d+1](vars[tensor_to_vector(a,b)])) / 
+                                vars[tensor_to_vector(c,d)]
+        end
+    end
+    return 0.5 * eqn
+end
+
+"""
+    Ricci(i, j, inverse)
+
+Compute the [i,j] entry of the Ricci tensor. 
+"""
+function Ricci_simplified2(i::Int, j::Int, vars)
+    eqn = 0
+    for a in 0:(n-1)
+        eqn += diff_vec_1[a+1](Γ_simplified2(a,i,j,vars))
+    end
+    for a in 0:(n-1)
+        eqn -= diff_vec_1[j+1](Γ_simplified2(a,a,i,vars))
+    end
+    for a in 0:(n-1)
+        for b in 0:(n-1)
+            eqn += Γ_simplified2(a,a,b,vars)*Γ_simplified2(b,i,j,vars) - 
+                        Γ_simplified2(a,i,b,vars)*Γ_simplified2(b,a,j,vars)
         end
     end
     return eqn
