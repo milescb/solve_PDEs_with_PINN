@@ -4,6 +4,7 @@ Date: Fall 2022
 
 Solve Einstein's fields equations to obtain the Schwarzschild metric. 
 =#
+@info "Loading Packages"
 using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, DiffEqFlux
 import ModelingToolkit: Interval
 using JLD2
@@ -23,7 +24,7 @@ vars = @variables g00(..) g01(..) g02(..) g03(..) #=
                =# g20(..) g21(..) g22(..) g23(..) #=
                =# g30(..) g31(..) g32(..) g33(..)
 
-@info "Varialbes and parameters loaded" params vars
+@info "Variables and parameters loaded" params vars
 
 Dτ = Differential(τ)
 Dρ = Differential(ρ)
