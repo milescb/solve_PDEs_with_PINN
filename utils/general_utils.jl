@@ -26,7 +26,7 @@ vector to store loss history.
 callback = function (p,l)
     global i += 1
     if i % 100 == 0
-        println("Current loss is: $l")
+        @info "Current loss is: $l"
     end
     append!(loss_history, l)
     return false
