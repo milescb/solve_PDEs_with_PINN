@@ -4,7 +4,7 @@ Date: Fall 2022
 
 Solve Einstein's fields equations to obtain the Schwarzschild metric. 
 =#
-using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, CUDA
+using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers
 import ModelingToolkit: Interval
 using JLD2
 
