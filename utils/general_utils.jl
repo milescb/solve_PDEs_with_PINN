@@ -1,4 +1,5 @@
 function save_training_files(path)
+    @info "Saving training files to" path
     save_object(path*"/phi.jld2", phi)
     save_object(path*"/res.jld2", res)
     save_object(path*"/loss.jld2", loss_history)
@@ -6,6 +7,7 @@ function save_training_files(path)
 end
 
 function load_training_files(path)
+    @info "Loading training file from" path
     discretization = load_object(path*"/discretization.jld2")
     phi = load_object(path*"/phi.jld2")
     res = load_object(path*"/res.jld2")
