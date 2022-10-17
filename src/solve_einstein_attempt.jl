@@ -107,6 +107,7 @@ chains = [Lux.Chain(Lux.Dense(dim, 32, activation),
             Lux.Dense(16, 1)) for _ in 1:numChains]
 
 initθ = [DiffEqFlux.initial_params(chains[i]) |> Lux.gpu for i in 1:numChains]
+@info "Using GPUs?" initθ
 
 strategy = QuadratureTraining()
 discretization = PhysicsInformedNN(chains, strategy, init_params = initθ)
