@@ -94,6 +94,7 @@ jobScript += ['for GITFILE in $(git ls-files); do if [[ $GITFILE == *"/"* ]]; th
 # Run file using specified version of Julia
 jobScript += ['/afs/cern.ch/user/m/mcochran/julia_new/julia-1.8.2/bin/julia --project '+myExec]
 jobScript += ['cp trained_networks/EPE_simple/*.jld2 '+jobPath]
+jobScript += ['cp plots/EPE_simple_solution/*.jld2 '+jobPath]
 jobScript += ['cd ..']
 jobScript += ['rm -rf '+jobName]
 

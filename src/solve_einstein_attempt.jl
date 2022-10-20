@@ -6,6 +6,7 @@ Solve Einstein's fields equations to obtain the Schwarzschild metric.
 =#
 @info "Loading Packages"
 using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, DiffEqFlux
+using Plots
 import ModelingToolkit: Interval
 using JLD2
 
@@ -107,6 +108,9 @@ chains = [Lux.Chain(Lux.Dense(dim, 32, activation),
             Lux.Dense(32, 16, activation),
             Lux.Dense(16, 1)) for _ in 1:numChains]
 
+# This fully does not work currently... ask how to use GPUs? 
+# Tried on both M1 mac and lxplus node
+# Problem when feeding in arguments to discretize function as initial_params
 initθ = [DiffEqFlux.initial_params(chains[i]) |> Lux.gpu for i in 1:numChains]
 @info "Using GPUs?" initθ
 
@@ -119,14 +123,41 @@ discretization = PhysicsInformedNN(chains, strategy)
 i = 0
 loss_history = []
 
-res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(0.1); callback = callback, maxiters=500)
+if ARGS != String[]
+    learning_rates = [ARGS[1], ARGS[2], ARGS[3]]
+else
+    learning_rates = [0.7, 0.1, 0.0001]
+end
+
+@info "Beginning training with learning rate" learning_rates[1] 
+res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[1]); callback = callback, maxiters=500)
+loss1_history = loss_history
+loss_history = []
+
+@info "Beginning training with learning rate" learning_rates[2] 
 prob = remake(prob, u0=res.minimizer)
-@info "First round of training complete" prob
-#res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(0.01); callback = callback, maxiters=2000)
-# prob = remake(prob,u0=res.minimizer)
-# res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(0.0001); callback = callback, maxiters=5000)
+res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[2]); callback = callback, maxiters=500)
+loss2_history = loss_history
+loss_history = []
+
+@info "Beginning training with learning rate" learning_rates[3]
+prob = remake(prob,u0=res.minimizer) 
+res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[3]); callback = callback, maxiters=500)
+loss3_history = loss_history
+loss_history = vcat(loss1_history, loss2_history, loss3_history)
 phi = discretization.phi
 
 @info "Training complete"
+
+# Plot loss!
+plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss",
+        size=(400,400), dpi=200, label="")
+plot!(1:length(loss1_history), loss1_history, 
+        label="Learning rate $(learning_rates[1])")
+plot!(length(loss1_history)+1:length(loss1_history+loss2_history), 
+        loss2_history, label="Learning rate $(learning_rates[2])")
+plot!(length(loss1_history+loss2_history)+1:length(loss1_history+loss2_history+loss3_history), 
+        loss3_history, label="Learning rate $(learning_rates[3])")
+savefig("./plots/EPE_simple_solution/loss.png")
 
 save_training_files("trained_networks/EFE_simple")

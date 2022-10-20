@@ -11,7 +11,11 @@ const M = 1.989e30 #kg
 const ricci_r = 2*G*M/c^2 
 
 # load results of training
-discretization, phi, res, loss = load_training_files("trained_networks/EFE_simple")
+if ARGS != String[]
+    discretization, phi, res, loss = load_training_files("trained_networks/EFE_simple")
+else
+    discretization, phi, res, loss = load_training_files(ARGS[1])
+end
 
 params = @parameters τ ρ θ ϕ
 vars = @variables g00(..) g01(..) g02(..) g03(..) #=
@@ -40,9 +44,8 @@ u_predict = [[[[phi[i]([τ,ρ,θ,ϕ], minimizers[i])[1] for ρ in ρs for θ in 
 u_real = [[[[u_analytic(τ,ρ,θ,ϕ)[i] for ρ in ρs for θ in θs] for ϕ in ϕs] for τ in τs] for i in 1:length(dep_vars)]
 diff_u = [[[abs.(u_predict[i][j][k] .- u_real[i][j][k]) for k in eachindex(ϕs)] for j in eachindex(τs)] for i in eachindex(dep_vars)]
 
-#xs, ys, zs = spherical_to_cartesian(ρs, θs, ϕs)
-
 # Plots them thangs!
+# Perhaps not the best way to do this atm... But it's one way to do it
 for g in eachindex(dep_vars)
     anim = @animate for i ∈ eachindex(τs)
         plt1 = plot(ρs, θs, u_predict[g][i][1], linetype=:contourf, dpi=200,
