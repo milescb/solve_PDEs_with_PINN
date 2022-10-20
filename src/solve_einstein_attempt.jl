@@ -111,8 +111,8 @@ initθ = [DiffEqFlux.initial_params(chains[i]) |> Lux.gpu for i in 1:numChains]
 @info "Using GPUs?" initθ
 
 strategy = QuadratureTraining()
-discretization = PhysicsInformedNN(chains, strategy, init_params = initθ)
-@time prob = NeuralPDE.discretize(pde_sys, discretization)
+discretization = PhysicsInformedNN(chains, strategy)
+@time prob = discretize(pde_sys, discretization)
 
 @info "discretization complete" prob
 
