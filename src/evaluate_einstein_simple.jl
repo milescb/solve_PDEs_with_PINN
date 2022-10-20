@@ -24,33 +24,51 @@ domains = [τ ∈ Interval(0, 10.0),
             θ ∈ Interval(0, π),
             ϕ ∈ Interval(0, 2π)]
 
-τs, ρs, θs, ϕs = [domain.domain.lower:1.0:domain.domain.upper for domain in domains]
+gran = 25
+τs, ρs, θs, ϕs = [infimum(d.domain):((supremum(d.domain)-infimum(d.domain))/gran):supremum(d.domain) for d in domains]
+τs = τs[1:gran]
+ρs = ρs[1:gran]
+θs = θs[1:gran]
+ϕs = ϕs[1:gran]
 
 dep_vars = [:g00, :g11]
 minimizers = [res.u.depvar[dep_vars[i]] for i in eachindex(dep_vars)]
 
 u_analytic(τ,ρ,θ,ϕ) = [1 - ricci_r/ρ, -(1 - ricci_r/ρ)^(-1)]
 
-u_predict = [[phi[i]([τ,ρ,θ,ϕ], minimizers[i])[1] for τ in τs for ρ in ρs for θ in θs for ϕ in ϕs] for i in 1:length(dep_vars)]
-u_real = [[u_analytic(τ,ρ,θ,ϕ)[i] for τ in τs for ρ in ρs for θ in θs for ϕ in ϕs] for i in 1:length(dep_vars)]
-diff_u = [abs.(u_predict[i] .- u_real[i]) for i in 1:length(dep_vars)]
+u_predict = [[[[phi[i]([τ,ρ,θ,ϕ], minimizers[i])[1] for ρ in ρs for θ in θs] for ϕ in ϕs] for τ in τs] for i in 1:length(dep_vars)]
+u_real = [[[[u_analytic(τ,ρ,θ,ϕ)[i] for ρ in ρs for θ in θs] for ϕ in ϕs] for τ in τs] for i in 1:length(dep_vars)]
+diff_u = [[[abs.(u_predict[i][j][k] .- u_real[i][j][k]) for k in eachindex(ϕs)] for j in eachindex(τs)] for i in eachindex(dep_vars)]
+
+#xs, ys, zs = spherical_to_cartesian(ρs, θs, ϕs)
 
 # Plots them thangs!
-for i in eachindex(dep_vars)
-    plt1 = plot(τs, u_predict[i], label="Predicted Solution", xaxis=L"\tau", 
-        yaxis=L"g_{00}", size=(300,300), dpi = 200)
-    plot!(τs, u_real[i], label="True Solution")
+for g in eachindex(dep_vars)
+    anim = @animate for i ∈ eachindex(τs)
+        plt1 = plot(ρs, θs, u_predict[g][i][1], linetype=:contourf, dpi=200,
+                xlabel=L"\rho", ylabel=L"\theta", zlabel=L"\tau")
+        title!("Predicted(τ=$(τs[i]),ϕ=0)")
+        plt2 = plot(ρs, θs, u_real[g][i][1], linetype=:contourf, dpi=200,
+                xlabel=L"\rho", ylabel=L"\theta", zlabel=L"\tau")
+        title!("Analytic(τ=$(τs[i]),ϕ=0)")
+        plt3 = plot(ρs, θs, diff_u[g][i][1], linetype=:contourf, dpi=200,
+                xlabel=L"\rho", ylabel=L"\theta", zlabel=L"\tau")
+        title!("Difference(τ=$(τs[i]),ϕ=0)")
+        plot(plt1, plt2, plt3)
+    end
+    gif(anim, "./plots/EPE_simple_solution/sol_tau_g$g$g.gif", fps = 5)
 
-    plt2 = plot(ρs, u_predict[i], label="Predicted Solution", xaxis=L"\rho", 
-        yaxis=L"g_{00}", size=(300,300), dpi=200)
-    plot!(ρs, u_real[i], label="True Solution")
-
-    # plt3 = plot(θs, u_predict[i], label="Predicted Solution", xaxis=L"\theta", 
-    #     yaixs=L"g_{00}", size=(300,300), dpi=200)
-    # plot!(θs, u_real[i], label="True Solution")
-
-    plt4 = plot(ϕs, u_predict[i])
-
-    plot(plt1, plt2)
-    savefig("../solve_PDEs_with_PINN/plots/EPE_simple_solution/g$(i)$(i)_solution.png")
+    anim = @animate for i ∈ eachindex(τs)
+        plt1 = plot(ρs, θs, u_predict[g][1][i], linetype=:contourf, dpi=200,
+                xlabel=L"\rho", ylabel=L"\theta", zlabel=L"\tau")
+        title!("Predicted(τ=0,ϕ=$(round(ϕs[i])))")
+        plt2 = plot(ρs, θs, u_real[g][1][i], linetype=:contourf, dpi=200,
+                xlabel=L"\rho", ylabel=L"\theta", zlabel=L"\tau")
+        title!("Analytic(τ=0,ϕ=$(round(ϕs[i])))")
+        plt3 = plot(ρs, θs, diff_u[g][1][i], linetype=:contourf, dpi=200,
+                xlabel=L"\rho", ylabel=L"\theta", zlabel=L"\tau")
+        title!("Difference(τ=0,ϕ=$(round(ϕs[i])))")
+        plot(plt1, plt2, plt3)
+    end
+    gif(anim, "./plots/EPE_simple_solution/sol_phi_g$g$g.gif", fps = 5)
 end

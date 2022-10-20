@@ -14,6 +14,15 @@ function load_training_files(path)
     loss = load_object(path*"/loss.jld2")
     return discretization, phi, res, loss
 end
+
+function spherical_to_cartesian(ρ,θ,ϕ)
+    @info "Converting from spherical to cartesean coords."
+    x = ρ.*sin.(θ).*cos.(ϕ)
+    y = ρ.*sin.(θ).*sin.(ϕ)
+    z = ρ.*cos.(θ)
+    return x,y,z
+end
+
 # Definition of callback function
 """
     callback(p,l)
