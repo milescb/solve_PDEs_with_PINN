@@ -44,12 +44,13 @@ vars_complete_simple =   [g00(τ,ρ,θ,ϕ), 0,            0,            0, #=
                        =# 0           , 0           , -ρ^2        , 0, #=
                        =# 0           , 0           , 0           , -ρ^2 * (sin(θ))^2]
 
-#inverse_complete = inverse_4x4(vars_complete)
+inverse_complete = inverse_4x4(vars_complete)
 
 # should also be symmetric! Only 10 eqns; kinda ugly way of doing this but it works?
 #eqns = [Ricci(i,j,inverse_complete) ~ 0 for i in 0:(n-1) for j in 0:(n-1)]
 indices_eqns = [(0,0), (0,1), (0,2), (0,3), (1,1), (1,2), (1,3), (2,2), (2,3), (3,3)]
-eqns = [Ricci_simplified2(k[1],k[2],vars_complete_simple) ~ 0 for k in indices_eqns]
+eqns = [PDE_equations(k[1],k[2],inverse_complete) ~ 0 for k in indices_eqns]
+#eqns = [Ricci_simplified2(k[1],k[2],vars_complete_simple) ~ 0 for k in indices_eqns]
 
 # eqns = []
 # for i in eachindex(eqns_temp)

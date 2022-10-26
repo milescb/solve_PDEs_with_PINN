@@ -115,11 +115,8 @@ end
     Γ(a,b,c,inverse)
 
 Compute connection coefficients.
-
-Currently, I have added restrictions that account for the matrix 
-being diagonal. These should eventually be removed. 
 """
-function Γ(c::Int, a::Int, b::Int, inverse::Any) 
+function Γ(c::Int, a::Int, b::Int, inverse::Vector) 
     eqn = 0
     for d in 0:(n-1)
         eqn += (diff_vec_1[a+1](vars[tensor_to_vector(b,d)](τ,ρ,θ,ϕ)) + 
@@ -128,6 +125,24 @@ function Γ(c::Int, a::Int, b::Int, inverse::Any)
                             inverse[tensor_to_vector(c,d)]
     end
     return 0.5 * eqn
+end
+
+"""
+    PDE_equations(i,j,inverse)
+
+Compute PDEs for finding Schwarzschild metric.
+"""
+function PDE_equations(i::Int, j::Int, inverse::Vector)
+    eqn = 0
+    for a in 0:(n-1)
+        eqn += diff_vec_1[a+1](Γ(a,i,j,inverse))
+    end
+    for a in 0:(n-1)
+        for b in 0:(n-1)
+            eqn += Γ(a,i,b,inverse)*Γ(b,j,a,inverse)
+        end
+    end
+    return eqn;
 end
 
 """
@@ -153,7 +168,6 @@ function Ricci(i::Int, j::Int, inverse)
 end
 
 """
-
 """
 function Γ_simplified(c::Int, a::Int, b::Int) 
     eqn = 0
