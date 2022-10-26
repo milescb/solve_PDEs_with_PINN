@@ -1,9 +1,32 @@
+#=
+Author: Miles Cochran-Branson
+Date: Fall 2023
+
+In the following script, the solution to the PDEs presented in 
+https://www.sciencedirect.com/science/article/pii/S0898122107003033#b17
+are solved using NeuralPDE.jl. In particular, we solve the system 
+
+    ∂ₜu - ∂ₓv + (u + v) = 0
+    ∂ₜv - ∂ₓu + (u + v) = 0
+
+with the initial conditions
+
+    u(0,x) = sinh(x)
+    v(0,x) = cosh(x). 
+
+The analytical solution to this system is given by
+
+    u(t,x) = sinh(x-t)
+    v(t,x) = cosh(x-t).
+=#
 using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, DomainSets
 using Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
 
 include("../utils/general_utils.jl")
 
+# ---------------------------------------------------------------------------------------------
+# Set-up equations and create discretization
 @parameters t x
 @variables u(..) v(..)
 
@@ -21,7 +44,7 @@ domains = [x ∈ Interval(0.0, 1.0),
 @named pde_sys = PDESystem(eqns, bcs, domains, [t,x], [u(t,x), v(t,x)])
 
 dim = length(domains) # number of dimensions
-n = 15
+n = 30
 chains = [Lux.Chain(
             Dense(dim, n, Lux.σ), 
             Dense(n, n, Lux.σ), 
@@ -31,19 +54,21 @@ strategy = QuadratureTraining()
 discretization = PhysicsInformedNN(chains, strategy)
 @time prob = discretize(pde_sys, discretization)
 
+# ---------------------------------------------------------------------------------------------
+# Train network to find solution
 i = 0
 loss_history = []
 
 learning_rates = [1e-3, 1e-4, 1e-7]
-res = @time Optimization.solve(prob, ADAM(1e-3); callback = callback, maxiters=10000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=10000)
 loss_history1 = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(1e-5); callback = callback, maxiters=7000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=7000)
 loss_history2 = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(1e-7); callback = callback, maxiters=1000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=1000)
 loss_history3 = loss_history
 loss_history = vcat(loss_history1, loss_history2, loss_history3)
 phi = discretization.phi
