@@ -23,7 +23,7 @@ using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, Dom
 using Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
 
-include("../utils/general_utils.jl")
+include("./utils/general_utils.jl")
 
 # ---------------------------------------------------------------------------------------------
 # Set-up equations and create discretization

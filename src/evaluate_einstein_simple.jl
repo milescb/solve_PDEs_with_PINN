@@ -2,7 +2,7 @@ using ModelingToolkit, NeuralPDE
 using JLD2, Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
 
-include("../utils/general_utils.jl")
+include("./utils/general_utils.jl")
 
 # define some consts
 const G = 6.67e-11 # m²/kg²
@@ -11,7 +11,7 @@ const M = 1.989e30 #kg
 const ricci_r = 2*G*M/c^2 
 
 # load results of training
-if ARGS != String[]
+if ARGS == String[]
     discretization, phi, res, loss = load_training_files("trained_networks/EFE_simple")
 else
     discretization, phi, res, loss = load_training_files(ARGS[1])
