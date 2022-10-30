@@ -94,7 +94,7 @@ function inverse_4x4(A::Vector)
     invs = []
     for i in 1:4
         for j in 1:4
-            push!(invs, adjugate_4x4(i,j,A) / det)
+            push!(invs, adjugate_4x4(j,i,A) / det)
         end
     end
     return invs
