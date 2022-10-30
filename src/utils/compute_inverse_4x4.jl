@@ -84,6 +84,9 @@ end
 Compute the inverse of a 4x4 matrix represented as a vector. 
 """
 function inverse_4x4(A::Vector)
+    if length(A) != 16
+        error("Incorrect length of vector. Must be of length 16")
+    end
     det = det_4x4(A)
     invs = []
     for i in 1:4
