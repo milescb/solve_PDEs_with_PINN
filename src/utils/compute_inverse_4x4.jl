@@ -1,5 +1,14 @@
-# --------------------------------------------------------
-# Compute inverse matrix 
+#=
+Author: Miles Cochran-Branson
+Date: Fall 2022
+
+Functions to compute inverse of a 4x4 matrix. This can be used by
+including this script via `include("compute_inverse_4x4.jl")` and 
+then calling the function `inverse_4x4(A)`. This function takes as
+input a vector, A, of length 16 which represents a 4x4 matrix and 
+returns a vector where each element is a component of the inverse 
+of A. 
+=#
 
 using StaticArrays
 
