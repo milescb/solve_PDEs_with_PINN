@@ -30,18 +30,18 @@ end
 
 Compute connection coefficients.
 """
-function Γ(c::Int, a::Int, b::Int, vars::Vector) 
+function Γ(c::Int, a::Int, b::Int, vars::Vector, invs::Vector) 
     eqn = 0
     for d in 0:(n-1)
         if c == d
             if b == d
-                eqn += (diff_vec_1[a+1](vars[tensor_to_vector(b,d)]))/vars[tensor_to_vector(c,d)]
+                eqn += (diff_vec_1[a+1](vars[tensor_to_vector(b,d)]))*invs[tensor_to_vector(c,d)]
             end
             if a == d
-                eqn += (diff_vec_1[b+1](vars[tensor_to_vector(a,d)]))/vars[tensor_to_vector(c,d)]
+                eqn += (diff_vec_1[b+1](vars[tensor_to_vector(a,d)]))*invs[tensor_to_vector(c,d)]
             end
             if a == b
-                eqn += (diff_vec_1[d+1](vars[tensor_to_vector(a,b)]))/vars[tensor_to_vector(c,d)]
+                eqn += (diff_vec_1[d+1](vars[tensor_to_vector(a,b)]))*invs[tensor_to_vector(c,d)]
             end
         end
     end
@@ -53,14 +53,14 @@ end
 
 Compute PDEs for finding Schwarzschild metric.
 """
-function PDE_equations(i::Int, j::Int, vars::Vector)
+function PDE_equations(i::Int, j::Int, vars::Vector, invs::Vector)
     eqn = 0
     for a in 0:(n-1)
-        eqn += diff_vec_1[a+1](Γ(a,i,j,vars))
+        eqn += diff_vec_1[a+1](Γ(a,i,j,vars,invs))
     end
     for a in 0:(n-1)
         for b in 0:(n-1)
-                eqn += Γ(a,i,b,vars)*Γ(b,j,a,vars)
+                eqn += Γ(a,i,b,vars)*Γ(b,j,a,vars,invs)
         end
     end
     return eqn;

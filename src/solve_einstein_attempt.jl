@@ -11,6 +11,9 @@ import ModelingToolkit: Interval
 using JLD2
 
 include("./utils/utils_einstein.jl")
+# although the inverse of a diagonal matrix is just the inverse 
+# of the diagonal elements, this allows for generalization if need-be
+include("./utils/compute_inverse_4x4.jl")
 include("./utils/general_utils.jl")
 
 # A collection of constants to be used 
@@ -33,15 +36,16 @@ Dϕ = Differential(ϕ)
 diff_vec_1 = [Dτ, Dρ, Dθ, Dϕ]
 
 # shape of entire matrix 
-g_matrix_complete = [g00(τ,ρ,θ,ϕ), 0           , 0           , 0            , #=
-                  =# 0           , g11(τ,ρ,θ,ϕ), 0           , 0            , #= 
-                  =# 0           , 0           , -ρ^2        , 0            , #=
-                  =# 0           , 0           , 0           , -ρ^2 * (sin(θ))^2]
+g_matrix_complete = [g00(τ,ρ,θ,ϕ), 0            , 0           , 0            , #=
+                  =# 0           , -g11(τ,ρ,θ,ϕ), 0           , 0            , #= 
+                  =# 0           , 0            , -ρ^2        , 0            , #=
+                  =# 0           , 0            , 0           , -ρ^2 * (sin(θ))^2]
 
+g_matrix_inverse = inverse_4x4(g_matrix_complete)
 
 # ensure we do not have identical equations; metrix is symmetric
 indices_eqns = [(0,0), (0,1), (0,2), (0,3), (1,1), (1,2), (1,3), (2,2), (2,3), (3,3)]
-eqns = [PDE_equations(k[1],k[2],g_matrix_complete) ~ 0 for k in indices_eqns]
+eqns = [PDE_equations(k[1],k[2],g_matrix_complete,g_matrix_inverse) ~ 0 for k in indices_eqns]
 
 # for now, use prior knowledge of what the metric looks like
 ρ_limit = 1e8
