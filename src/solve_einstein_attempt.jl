@@ -51,6 +51,8 @@ bcs = [ # spherically symetric
         # flat space-time as r → ∞
         g00(τ,ρ_limit,θ,ϕ) ~ 1,
         g11(τ,ρ_limit,θ,ϕ) ~ -1,
+        #another thang?
+        g00(τ,ρ,θ,ϕ) ~ 1/g11(τ,ρ,θ,ϕ)
 ]
 
 domains = [τ ∈ Interval(0, 10.0),
