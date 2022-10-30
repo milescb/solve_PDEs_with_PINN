@@ -4,7 +4,6 @@ Date: Fall 2022
 
 Functions to aid in set-up of system!
 =#
-using StaticArrays
 
 """
     tensor_to_vector(i::Int, j::Int)

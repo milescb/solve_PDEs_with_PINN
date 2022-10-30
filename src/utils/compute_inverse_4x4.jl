@@ -1,6 +1,8 @@
 # --------------------------------------------------------
 # Compute inverse matrix 
 
+using StaticArrays
+
 """
     minor_components(i::Int, j::Int)
 
