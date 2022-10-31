@@ -55,8 +55,6 @@ bcs = [ # spherically symetric
         # flat space-time as r → ∞
         g00(τ,ρ_limit,θ,ϕ) ~ 1,
         g11(τ,ρ_limit,θ,ϕ) ~ -1,
-        #another thang? I don't think this is needed
-        g00(τ,ρ,θ,ϕ) ~ 1/g11(τ,ρ,θ,ϕ)
         # need  ONE MORE INITIAL CONDITION!!
 ]
 
@@ -65,11 +63,11 @@ domains = [τ ∈ Interval(0, 10.0),
             θ ∈ Interval(0, π),
             ϕ ∈ Interval(0, 2π)]
 
-@named pde_sys = PDESystem(eqns, bcs, domains, [τ, ρ, θ, ϕ], [g_matrix_complete[i] for i in [1,6]])
+@named pde_sys = PDESystem(eqns, bcs, domains, [τ, ρ, θ, ϕ], [g00(τ,ρ,θ,ϕ), g11(τ,ρ,θ,ϕ)])
 
 @info "Equations and boundry conditions calculated"
 
-numChains = 2
+numChains = length(vars)
 dim = length(domains) # number of dimensions
 activation = Lux.σ
 chains = [Lux.Chain(Lux.Dense(dim, 32, activation), 
@@ -94,25 +92,25 @@ loss_history = []
 if ARGS != String[]
     learning_rates = [ARGS[1], ARGS[2], ARGS[3]]
 else
-    learning_rates = [0.001, 0.1, 0.0001]
+    learning_rates = [1e-3, 1e-3, 1e-4]
 end
 
 @info "Beginning training with learning rate" learning_rates[1] 
-res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[1]); callback = callback, maxiters=500)
-loss1_history = loss_history
-loss_history = []
+res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[1]); callback = callback, maxiters=2000)
+# loss1_history = loss_history
+# loss_history = []
 
-@info "Beginning training with learning rate" learning_rates[2] 
-prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[2]); callback = callback, maxiters=500)
-loss2_history = loss_history
-loss_history = []
+# @info "Beginning training with learning rate" learning_rates[2] 
+# prob = remake(prob, u0=res.minimizer)
+# res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[2]); callback = callback, maxiters=500)
+# loss2_history = loss_history
+# loss_history = []
 
-@info "Beginning training with learning rate" learning_rates[3]
-prob = remake(prob,u0=res.minimizer) 
-res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[3]); callback = callback, maxiters=500)
-loss3_history = loss_history
-loss_history = vcat(loss1_history, loss2_history, loss3_history)
+# @info "Beginning training with learning rate" learning_rates[3]
+# prob = remake(prob,u0=res.minimizer) 
+# res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[3]); callback = callback, maxiters=500)
+# loss3_history = loss_history
+# loss_history = vcat(loss1_history, loss2_history, loss3_history)
 phi = discretization.phi
 
 @info "Training complete"
@@ -120,12 +118,12 @@ phi = discretization.phi
 # Plot loss!
 plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss",
         size=(400,400), dpi=200, label="")
-plot!(1:length(loss1_history), loss1_history, 
-        label="Learning rate $(learning_rates[1])")
-plot!(length(loss1_history)+1:length(loss1_history+loss2_history), 
-        loss2_history, label="Learning rate $(learning_rates[2])")
-plot!(length(loss1_history+loss2_history)+1:length(loss1_history+loss2_history+loss3_history), 
-        loss3_history, label="Learning rate $(learning_rates[3])")
+# plot!(1:length(loss1_history), loss1_history, 
+#         label="Learning rate $(learning_rates[1])")
+# plot!(length(loss1_history)+1:length(loss1_history+loss2_history), 
+#         loss2_history, label="Learning rate $(learning_rates[2])")
+# plot!(length(loss1_history+loss2_history)+1:length(loss1_history+loss2_history+loss3_history), 
+#         loss3_history, label="Learning rate $(learning_rates[3])")
 savefig("./plots/EPE_simple_solution/loss.png")
 
 save_training_files("trained_networks/EFE_simple")

@@ -2,7 +2,8 @@
 Author: Miles Cochran-Branson
 Date: Fall 2022
 
-Functions to aid in set-up of system!
+Set-up differential equations to solve EFE to obtain 
+Schwarzschild metric. 
 =#
 
 """
@@ -60,7 +61,7 @@ function PDE_equations(i::Int, j::Int, vars::Vector, invs::Vector)
     end
     for a in 0:(n-1)
         for b in 0:(n-1)
-                eqn += Γ(a,i,b,vars)*Γ(b,j,a,vars,invs)
+                eqn += Γ(a,i,b,vars,invs)*Γ(b,j,a,vars,invs)
         end
     end
     return eqn;

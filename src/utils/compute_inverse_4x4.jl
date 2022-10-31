@@ -88,8 +88,11 @@ function inverse_4x4(A::Vector)
         error("Incorrect length of vector. Must be of length 16")
     end
     det = det_4x4(A)
-    if det == 0
-        error("Matrix is not invertible")
+    if typeof(det) != Num # required in order to pass symbols
+        # if computing a numeric inverse, check that this is possible
+        if det == 0
+            error("Matrix is not invertible")
+        end
     end
     invs = []
     for i in 1:4
