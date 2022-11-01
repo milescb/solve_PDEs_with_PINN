@@ -96,7 +96,7 @@ else
 end
 
 @info "Beginning training with learning rate" learning_rates[1] 
-res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[1]); callback = callback, maxiters=2000)
+res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[1]); callback = callback, maxiters=1500)
 # loss1_history = loss_history
 # loss_history = []
 
