@@ -74,23 +74,24 @@ discretization = PhysicsInformedNN(chains, strategy, init_params = ps)
 # parameters for callback
 i = 0
 loss_history = []
+learning_rates = [0.1, 0.01, 0.0001]
 
 # Training
-res = @time Optimization.solve(prob, ADAM(0.1); callback = callback, maxiters=500)
+res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=500)
 loss1_history = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(0.01); callback = callback, maxiters=2000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=2000)
 loss2_history = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(0.0001); callback = callback, maxiters=2000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=2000)
 loss3_history = loss_history
 loss_history = vcat(loss1_history, loss2_history, loss3_history)
 phi = discretization.phi
 
 ## Analysis
-u_analytic(t,x) = [exp(-π^2 * t) * cos(π*x), (1/π) * exp(-π^2*x) * sin(π*x)]
+u_analytic(t,x) = [exp(-π^2 * t) * cos(π*x), (1/π) * exp(-π^2*t) * sin(π*x)]
 
 dx = 0.1
 xs,ts = [infimum(d.domain):dx/10:supremum(d.domain) for d in domains]
@@ -113,7 +114,13 @@ for i in 1:length(chains)
     savefig("plots/integro_PDE/plot_u$i.png")
 end
 
-plt = plot(1:length(loss_history), loss_history, label="", size=(400,400), dpi=200)
-xlabel!("Epoch")
-ylabel!("Loss")
+plt = plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss", 
+            size=(400,400), dpi=300, label="", yaxis=:log)
+plot!(1:length(loss1_history), loss1_history, 
+        label="Learning rate $(learning_rates[1])")
+plot!(length(loss1_history)+1:length(loss1_history)+length(loss2_history), 
+        loss2_history, label="Learning rate $(learning_rates[2])")
+plot!(length(loss1_history)+length(loss2_history)+1:length(loss1_history)+
+        length(loss2_history)+length(loss3_history), 
+        loss3_history, label="Learning rate $(learning_rates[3])")
 savefig("plots/integro_PDE/loss.png")
