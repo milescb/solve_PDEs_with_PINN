@@ -37,7 +37,7 @@ diff_vec_1 = [Dτ, Dρ, Dθ, Dϕ]
 
 # shape of entire matrix 
 g_matrix_complete = [g00(τ,ρ,θ,ϕ), 0            , 0           , 0            , #=
-                  =# 0           , -g11(τ,ρ,θ,ϕ), 0           , 0            , #= 
+                  =# 0           , g11(τ,ρ,θ,ϕ), 0           , 0            , #= 
                   =# 0           , 0            , -ρ^2        , 0            , #=
                   =# 0           , 0            , 0           , -ρ^2 * (sin(θ))^2]
 
@@ -55,7 +55,10 @@ bcs = [ # spherically symetric
         # flat space-time as r → ∞
         g00(τ,ρ_limit,θ,ϕ) ~ 1,
         g11(τ,ρ_limit,θ,ϕ) ~ -1,
-        # need  ONE MORE INITIAL CONDITION!!
+        # knowledge about shape of solution
+        g00(τ,ρ,θ,ϕ) ~ -1/g11(τ,ρ,θ,ϕ),
+        # imposing limit of weak gravity 
+        g00(τ,ρ,θ,ϕ) ~ -c^2 + 2*G*M/ρ
 ]
 
 domains = [τ ∈ Interval(0, 10.0),
@@ -96,7 +99,7 @@ else
 end
 
 @info "Beginning training with learning rate" learning_rates[1] 
-res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[1]); callback = callback, maxiters=1500)
+res = @time Optimization.solve(prob, OptimizationOptimisers.ADAM(learning_rates[1]); callback = callback, maxiters=500)
 # loss1_history = loss_history
 # loss_history = []
 
