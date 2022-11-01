@@ -26,6 +26,7 @@ The above paper computes the PDE analytically using series expansions.
 Below, we show how this system can be easily solved using PINN and the NeuralPDE.jl package!
 =#
 using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, DomainSets
+using Random, CUDA
 using Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
 
@@ -61,8 +62,13 @@ chains = [Lux.Chain(
             Dense(n, n, Lux.σ), 
             Dense(n, 1)) for _ in 1:2]
 
-strategy = QuadratureTraining()
-discretization = PhysicsInformedNN(chains, strategy)
+# Use GPUs
+ps = [Lux.setup(Random.default_rng(), chains[i])[1] for i in 1:2]
+ps = [ps[i] |> Lux.ComponentArray |> gpu .|> Float32 for i in 1:2]
+
+#strategy = QuadratureTraining()
+strategy = QuasiRandomTraining(100)
+discretization = PhysicsInformedNN(chains, strategy, init_params = ps)
 @time prob = discretize(pde_sys, discretization)
 
 # parameters for callback
@@ -84,7 +90,7 @@ loss_history = vcat(loss1_history, loss2_history, loss3_history)
 phi = discretization.phi
 
 ## Analysis
-u_analytic(t,x) = [exp(-π^2 * t) * cos(π*x), (1/π) * exp(-π^2 * x)]
+u_analytic(t,x) = [exp(-π^2 * t) * cos(π*x), (1/π) * exp(-π^2*x) * sin(π*x)]
 
 dx = 0.1
 xs,ts = [infimum(d.domain):dx/10:supremum(d.domain) for d in domains]
@@ -107,8 +113,7 @@ for i in 1:length(chains)
     savefig("plots/integro_PDE/plot_u$i.png")
 end
 
-plt = plot(1:length(loss_history), loss_history)
+plt = plot(1:length(loss_history), loss_history, label="", size=(400,400), dpi=200)
 xlabel!("Epoch")
 ylabel!("Loss")
-plot(plt)
 savefig("plots/integro_PDE/loss.png")
