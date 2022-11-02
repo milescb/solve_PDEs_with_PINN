@@ -26,8 +26,8 @@ The above paper computes the PDE analytically using series expansions.
 Below, we show how this system can be easily solved using PINN and the NeuralPDE.jl package!
 =#
 using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, DomainSets
-using Random, CUDA
 using Plots, LaTeXStrings
+using Random, CUDA
 import ModelingToolkit: Interval, infimum, supremum
 
 include("../src/utils/general_utils.jl")
