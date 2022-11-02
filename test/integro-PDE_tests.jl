@@ -26,8 +26,8 @@ The above paper computes the PDE analytically using series expansions.
 Below, we show how this system can be easily solved using PINN and the NeuralPDE.jl package!
 =#
 using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers, DomainSets
-using Plots, LaTeXStrings
 using Random, CUDA
+using Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
 
 include("../src/utils/general_utils.jl")
@@ -83,21 +83,20 @@ loss_history = []
 learning_rates = [0.1, 0.01, 0.0001]
 
 # Training
-@info "Beginning Training"
-res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=1000)
+@info
+res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=500)
 loss1_history = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=1000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=2000)
 loss2_history = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=1000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=2000)
 loss3_history = loss_history
 loss_history = vcat(loss1_history, loss2_history, loss3_history)
 phi = discretization.phi
 
-@info "Training complete. Beginning analysis"
 ## Analysis
 u_analytic(t,x) = [exp(-π^2 * t) * cos(π*x), (1/π) * exp(-π^2*t) * sin(π*x)]
 
