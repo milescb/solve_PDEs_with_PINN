@@ -30,10 +30,12 @@ using Random, CUDA
 using Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
 
-include("./utils/general_utils.jl")
+include("../src/utils/general_utils.jl")
 
-@parameters t x
-@variables u1(..) u2(..)
+@info "Completed loading packages"
+
+params = @parameters t x
+vars = @variables u1(..) u2(..)
 
 Dx = Differential(x)
 Dxx = Differential(x)^2
@@ -56,20 +58,24 @@ domains = [x ∈ Interval(0.0, 1.0),
 @named pde_sys = PDESystem(eqns, bcs, domains, [t,x], [u1(t,x), u2(t,x)])
 
 dim = length(domains) # number of dimensions
-n = 15
+nodes = 15
 chains = [Lux.Chain(
-            Dense(dim, n, Lux.σ), 
-            Dense(n, n, Lux.σ), 
-            Dense(n, 1)) for _ in 1:2]
+            Dense(dim, nodes, Lux.σ), 
+            Dense(nodes, nodes, Lux.σ), 
+            Dense(nodes, 1)) for _ in 1:length(vars)]
 
 # Use GPUs
 ps = [Lux.setup(Random.default_rng(), chains[i])[1] for i in 1:2]
 ps = [ps[i] |> Lux.ComponentArray |> gpu .|> Float32 for i in 1:2]
 
+@info "Using GPUs?" ps
+
 #strategy = QuadratureTraining()
 strategy = QuasiRandomTraining(100)
 discretization = PhysicsInformedNN(chains, strategy, init_params = ps)
 @time prob = discretize(pde_sys, discretization)
+
+@info "discretization complete" prob
 
 # parameters for callback
 i = 0
@@ -77,19 +83,21 @@ loss_history = []
 learning_rates = [0.1, 0.01, 0.0001]
 
 # Training
-res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=500)
+@info "Beginning Training"
+res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=1000)
 loss1_history = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=2000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=1000)
 loss2_history = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=2000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=1000)
 loss3_history = loss_history
 loss_history = vcat(loss1_history, loss2_history, loss3_history)
 phi = discretization.phi
 
+@info "Training complete. Beginning analysis"
 ## Analysis
 u_analytic(t,x) = [exp(-π^2 * t) * cos(π*x), (1/π) * exp(-π^2*t) * sin(π*x)]
 
