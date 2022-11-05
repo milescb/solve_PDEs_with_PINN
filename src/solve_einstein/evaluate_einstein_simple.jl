@@ -2,7 +2,7 @@ using ModelingToolkit, NeuralPDE
 using JLD2, Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
 
-include("./utils/general_utils.jl")
+include("../utils/general_utils.jl")
 
 # define some consts
 const G = 6.67e-11 # m²/kg²
