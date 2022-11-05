@@ -21,39 +21,25 @@ const M = 1.989e30 #kg
 const ricci_r = 2*G*M/c^2 
 
 @parameters r
-vars = @variables A(..) B(..)
+vars = @variables A(..)
 
 Dr = Differential(r)
 Drr = Differential(r)^2
 
 eqns = [
-    4*Dr(A(r))*((B(r))^2) - 2*r*Drr(B(r))*A(r)*B(r) + 2*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) ~ 0,
-    r*Dr(A(r))*B(r) + 2*((A(r))^2)*B(r) - 2*A(r)*B(r) - r*Dr(B(r))*A(r) ~ 0,
-    -2*r*Drr(B(r))*A(r)*B(r) + r*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) - 4*Dr(B(r))*A(r)*B(r) ~ 0
+    Dr(A(r)) ~ (A(r)/r)*(1 - A(r)),
+    #A(r)*B(r) ~ K
 ]
 
 r_limit = 100
 bcs = [
-    B(r) ~ -1/A(r),
-    A(r) ~ A(r),
-    B(r_limit) ~ -1
+    A(r_limit) ~ 1
+    Drr(A(r)) ~ -M*G/(c^2 * r)
 ]
 
 domains = [r ∈ Interval(10, r_limit)]
 
 @named pde_sys = PDESystem(eqns, bcs, domains, [r], [A(r)])
-
-# maybe try and add term to loss function?
-#= 
-g00 = η00 + h00
-η00 = 1
-h00 = -2GM/(c^2 * r)
-=# 
-# dr = 0.1
-# rs = [infimum(d.domain):dr/10:supremum(d.domain) for d in domains][1]
-# function additional_loss(phi, θ, p)
-#     return phi[1](rs, θ[sep[1]]) .+ 2*G*M./((c^2).*rs)
-# end
 
 numChains = length(vars)
 dim = length(domains) # number of dimensions
@@ -71,13 +57,13 @@ discretization = PhysicsInformedNN(chains, strategy)
 i = 0
 loss_history = []
 
-res = Optimization.solve(prob, ADAM(1e-4); callback = callback, maxiters=1000)
+res = Optimization.solve(prob, ADAM(1e-2); callback = callback, maxiters=5000)
 phi = discretization.phi
 
 ## plot loss as a function of Epoch
 plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss",
         size=(400,400), dpi=200, label="")
-savefig("./plots/EPE_ODE_solution/loss.png")
+savefig("./plots/EPE_ODE_SIMPLE/loss.png")
 
 ## Compare solution to analytic!
 r_temp = 1.0
@@ -92,9 +78,4 @@ u_predict = [[phi[i]([r], minimizers[i])[1] for r in rs] for i in 1:numChains]
 plot(rs, u_real[1], xlabel=L"r", ylabel=L"A(r)", label="True Solution",
         size=(400,400), dpi=200, legend=:bottomright)
 plot!(rs, u_predict[1], label="Predicted Solution")
-savefig("./plots/EPE_ODE_solution/A.png")
-
-plot(rs, u_real[2], xlabel=L"r", ylabel=L"B(r)", label="True Solution",
-        size=(400,400), dpi=200, legend=:bottomright)
-plot!(rs, u_predict[2], label="Predicted Solution")
-savefig("./plots/EPE_ODE_solution/B.png")
+savefig("./plots/EPE_ODE_SIMPLE/A.png")
