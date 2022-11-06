@@ -23,6 +23,14 @@ function spherical_to_cartesian(ρ,θ,ϕ)
     return x,y,z
 end
 
+function χ²(obs::Vector, expt::Vector)
+    out = 0;
+    for i in eachindex(obs)
+        out += abs((obs[i] - expt[i])^2 / expt[i])
+    end
+    return out
+end
+
 # Definition of callback function
 """
     callback(p,l)

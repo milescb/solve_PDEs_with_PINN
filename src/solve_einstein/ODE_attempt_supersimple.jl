@@ -21,25 +21,27 @@ const M = 1.989e30 #kg
 const ricci_r = 2*G*M/c^2 
 
 @parameters r
-vars = @variables A(..)
+vars = @variables A(..) B(..)
 
 Dr = Differential(r)
 Drr = Differential(r)^2
 
+K = -c^2
 eqns = [
     Dr(A(r)) ~ (A(r)/r)*(1 - A(r)),
-    #A(r)*B(r) ~ K
+    A(r)*B(r) ~ K
 ]
 
 r_limit = 100
 bcs = [
     A(r_limit) ~ 1
-    Drr(A(r)) ~ -M*G/(c^2 * r)
+    B(r_limit) ~ -1
+    #Drr(A(r)) ~ -M*G/(c^2 * r)
 ]
 
 domains = [r ∈ Interval(10, r_limit)]
 
-@named pde_sys = PDESystem(eqns, bcs, domains, [r], [A(r)])
+@named pde_sys = PDESystem(eqns, bcs, domains, [r], [A(r), B(r)])
 
 numChains = length(vars)
 dim = length(domains) # number of dimensions
@@ -57,7 +59,7 @@ discretization = PhysicsInformedNN(chains, strategy)
 i = 0
 loss_history = []
 
-res = Optimization.solve(prob, ADAM(1e-2); callback = callback, maxiters=5000)
+res = Optimization.solve(prob, ADAM(1e-4); callback = callback, maxiters=10000)
 phi = discretization.phi
 
 ## plot loss as a function of Epoch
