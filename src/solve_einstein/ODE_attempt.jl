@@ -32,14 +32,14 @@ eqns = [
     -2*r*Drr(B(r))*A(r)*B(r) + r*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) - 4*Dr(B(r))*A(r)*B(r) ~ 0
 ]
 
-r_limit = 10000
+r_min = 3_000
+r_max = 1e6
 bcs = [
-    #B(r) ~ -1/A(r),
-    A(r_limit) ~ 1,
-    B(r_limit) ~ -1
+    B(r_max) ~ -1,
+    A(r_max) ~ 1,
 ]
 
-domains = [r ∈ Interval(100, r_limit)]
+domains = [r ∈ Interval(r_min, r_max)]
 
 @named pde_sys = PDESystem(eqns, bcs, domains, [r], [A(r), B(r)])
 
@@ -51,10 +51,10 @@ In the limit of Newtonian gravity we can write:
     h00 = -2GM/(c^2 * r)
 Let's add this as an additional term to our loss fucntion.
 =# 
-dr = 0.1
-rs = [infimum(d.domain):dr/10:supremum(d.domain) for d in domains][1]
+rs = r_min:25:2.5e+5
 function additional_loss(phi, θ, p)
-    return sum(abs2(phi[1](rs, θ[:A]) .+ 2*G*M./((c^2).*rs)))
+    return sum(sum(abs2, phi[1](rs[i], θ.depvar[:A])[1] + 
+        2*G*M/((c^2)*rs[i]) - 1) for i in eachindex(rs))
 end
 
 numChains = length(vars)
@@ -67,13 +67,14 @@ chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation),
 
 strategy = QuasiRandomTraining(100)
 #strategy = QuadratureTraining()
-discretization = PhysicsInformedNN(chains, strategy, additional_loss=additional_loss)
+discretization = PhysicsInformedNN(chains, strategy,
+    additional_loss=additional_loss)
 @time prob = discretize(pde_sys, discretization)
 
 i = 0
 loss_history = []
 
-res = Optimization.solve(prob, ADAM(1e-2); callback = callback, maxiters=2000)
+res = Optimization.solve(prob, ADAM(1e-3); callback = callback, maxiters=700)
 phi = discretization.phi
 
 ## plot loss as a function of Epoch
@@ -82,13 +83,13 @@ plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss",
 savefig("./plots/EPE_ODE_solution/loss.png")
 
 ## Compare solution to analytic!
-r_temp = 1.0
+r_temp = ricci_r
 u_analytic(ρ) = [1 - r_temp/ρ, -1/(1 - r_temp/ρ)]
 
 dep_vars = [:A, :B]
 minimizers = [res.u.depvar[dep_vars[i]] for i in eachindex(dep_vars)]
 
-dr = 0.1
+dr = 1000
 rs = [infimum(d.domain):dr/10:supremum(d.domain) for d in domains][1]
 
 u_real = [[u_analytic(r)[i] for r in rs] for i in 1:numChains]
@@ -97,11 +98,13 @@ u_predict = [[phi[i]([r], minimizers[i])[1] for r in rs] for i in 1:numChains]
 plot(rs, u_real[1], xlabel=L"r", ylabel=L"A(r)", label="True Solution",
         size=(400,400), dpi=200, legend=:bottomright)
 plot!(rs, u_predict[1], 
-        label="Predicted Solution, \$\\chi^2 = $(round(χ²(u_predict[1], u_real[1]),digits=2))\$")
+        label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[1], 
+            u_real[1])/length(u_predict[1]),digits=2))\$")
 savefig("./plots/EPE_ODE_solution/A.png")
 
 plot(rs, u_real[2], xlabel=L"r", ylabel=L"B(r)", label="True Solution",
         size=(400,400), dpi=200, legend=:bottomright)
 plot!(rs, u_predict[2], 
-        label="Predicted Solution, \$\\chi^2 = $(round(χ²(u_predict[2], u_real[2]),digits=2))\$")
+        label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[2], 
+            u_real[2])/length(u_predict[2]),digits=2))\$")
 savefig("./plots/EPE_ODE_solution/B.png")

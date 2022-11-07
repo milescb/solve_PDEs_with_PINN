@@ -42,6 +42,9 @@ vector to store loss history.
 """
 callback = function (p,l)
     global i += 1
+    if i == 1
+        @info "Initial loss is: $l"
+    end
     if i % 100 == 0
         @info "Current loss is: $l"
     end
