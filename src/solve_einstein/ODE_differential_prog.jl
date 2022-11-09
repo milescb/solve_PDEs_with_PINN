@@ -4,7 +4,8 @@ Date: Fall 2022
 
 We solve the Einstein field equations to obtain the Schwarzschild metrix. 
 
-Here, we start from ODEs given via simplification analytically. 
+Here, we start from ODEs given via simplification analytically. In order to 
+make our solution match Newtonian gravity, we consider a solution to classical
 =#
 using NeuralPDE, Lux, ModelingToolkit
 using DifferentialEquations, Statistics, SciMLSensitivity
@@ -37,8 +38,8 @@ eqns = [
     -2*r*Drr(B(r))*A(r)*B(r) + r*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) - 4*Dr(B(r))*A(r)*B(r) ~ 0
 ]
 
-r_min = 3_000
-r_max = 1e6
+r_min = 0.01
+r_max = 10
 bcs = [
     B(r_max) ~ -1,
     A(r_max) ~ 1,
@@ -58,8 +59,8 @@ function newton_gravity(ddu,du,u,p,t)
 end
 
 # initial conditions
-x0 = [0, 1, 0]
-dx0 = [0, 0, 10]
+x0 = [0.0, 1.0, 0.0] # units of AU
+dx0 = [0.0, 0.0, 0.01] # units of AU/yr
 tspan = (0.0, 10.0)
 
 # solve problem
@@ -67,7 +68,8 @@ dx = 0.5
 prob_newton = SecondOrderODEProblem(newton_gravity, dx0, x0, tspan)
 sol_newton = solve(prob_newton, saveat=dx)
 
-ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
+#ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
+ϵ = 0.1
 """
     additional_loss(phi,θ,p)
 
@@ -105,7 +107,7 @@ function additional_loss(phi, θ, p)
 end
 
 # -------------------------------------------------------------------------------------
-
+# define neural network
 numChains = length(vars)
 dim = length(domains) # number of dimensions
 activation = Lux.σ
@@ -114,15 +116,18 @@ chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation),
             Lux.Dense(nnodes, nnodes, activation),
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
+# discretize
 strategy = QuasiRandomTraining(100)
 #strategy = QuadratureTraining()
 discretization = PhysicsInformedNN(chains, strategy,
     additional_loss=additional_loss)
 @time prob = discretize(pde_sys, discretization)
 
+# some decoration for reporting the loss
 i = 0
 loss_history = []
 
+# solve the problem!
 res = Optimization.solve(prob, ADAM(1e-3); callback = callback, maxiters=2)
 phi = discretization.phi
 
@@ -133,14 +138,13 @@ plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss",
 savefig("./plots/EPE_ODE_solution/loss.png")
 
 ## Compare solution to analytic!
-r_temp = ricci_r
-u_analytic(ρ) = [1 - r_temp/ρ, -1/(1 - r_temp/ρ)]
+u_analytic(ρ) = [1 - ricci_r/ρ, -1/(1 - ricci_r/ρ)]
 
 dep_vars = [:A, :B]
 minimizers = [res.u.depvar[dep_vars[i]] for i in eachindex(dep_vars)]
 
-dr = 1000
-rs = [infimum(d.domain):dr/10:supremum(d.domain) for d in domains][1]
+dr = 0.01
+rs = [infimum(d.domain):dr:supremum(d.domain) for d in domains][1]
 
 u_real = [[u_analytic(r)[i] for r in rs] for i in 1:numChains]
 u_predict = [[phi[i]([r], minimizers[i])[1] for r in rs] for i in 1:numChains]
