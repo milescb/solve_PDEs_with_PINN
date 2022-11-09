@@ -16,13 +16,13 @@ using Plots, LaTeXStrings
 include("../utils/general_utils.jl")
 
 # define some consts
-# We will use astronomical units
 const G = 6.67e-11 # m²/kg²
-const c = 3e8 # m/s²
 const M = 1.989e30 #kg
 const AU = 1.496e11 # meters
 const yr = 3.154e7 #seconds
-const GM = 4π^2
+# change units
+const GM = G*M*yr^2 / AU^3 # AU^3/yr^2; Kepler III says this is 4π^2
+const c = 3e8 * (yr/AU) # AU / yr
 const ricci_r = 2*GM/c^2
 
 @parameters r
@@ -91,19 +91,17 @@ function additional_loss(phi, θ, p)
 
     # solve system of diff-eqs 
     prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob, Rosenbrock23(), saveat=0.5)
+    sol = solve(prob, Rosenbrock23(), saveat=dx)
 
-    println(length(sol))
+    # match data to newton solution and add to loss function
+    # extract appropriate time data
+    sol_nts = [[sol_newton[i][4], sol_newton[i][5], sol_newton[i][6]] for i in eachindex(sol_newton)]
+    sol_ts = [[sol[i][4], sol[i][5], sol[i][6]] for i in eachindex(sol_newton)]
 
-    # # match data to newton solution and add to loss function
-    # # extract appropriate time data
-    # sol_nts = [[sol_newton[i][4], sol_newton[i][5], sol_newton[i][6]] for i in eachindex(sol_newton)]
-    # sol_ts = [[sol[i][4], sol[i][5], sol[i][6]] for i in eachindex(sol_newton)]
-
-    # loss_term = sum(sqrt((sol_nts[i][1]-sol_ts[i][1])^2 + 
-    #                 (sol_nts[i][2]-sol_ts[i][2])^2 + 
-    #                     (sol_nts[i][3]-sol_ts[i][3])^2) for i in eachindex(sol_ts))
-    return 0;
+    loss_term = sum(sqrt((sol_nts[i][1]-sol_ts[i][1])^2 + 
+                    (sol_nts[i][2]-sol_ts[i][2])^2 + 
+                        (sol_nts[i][3]-sol_ts[i][3])^2) for i in eachindex(sol_ts))
+    return loss_term;
 end
 
 # -------------------------------------------------------------------------------------
