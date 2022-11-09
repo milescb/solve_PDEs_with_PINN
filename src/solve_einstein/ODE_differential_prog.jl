@@ -99,7 +99,7 @@ function additional_loss(phi, θ, p)
     prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
     sol = solve(prob, Rosenbrock23(), saveat=dx)
 
-    println("solved!")
+    #println("solved!")
 
     # match data to newton solution and add to loss function
     # extract appropriate time data
@@ -110,7 +110,7 @@ function additional_loss(phi, θ, p)
                     (sol_nts[i][2]-sol_ts[i][2])^2 + 
                         (sol_nts[i][3]-sol_ts[i][3])^2) for i in eachindex(sol_ts))
     
-    println(loss_term)
+    #println(loss_term)
     return loss_term;
 end
 
