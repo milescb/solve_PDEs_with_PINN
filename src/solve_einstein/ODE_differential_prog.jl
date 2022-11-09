@@ -38,8 +38,8 @@ eqns = [
     -2*r*Drr(B(r))*A(r)*B(r) + r*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) - 4*Dr(B(r))*A(r)*B(r) ~ 0
 ]
 
-r_min = 0.01
-r_max = 10
+r_min = 1.0
+r_max = 10.0
 bcs = [
     B(r_max) ~ -1,
     A(r_max) ~ 1,
@@ -48,6 +48,8 @@ bcs = [
 domains = [r ∈ Interval(r_min, r_max)]
 
 @named pde_sys = PDESystem(eqns, bcs, domains, [r], [A(r), B(r)])
+
+@info "Problem set-up complete"
 
 # -------------------------------------------------------------------------------------
 # Solve for Newtonian Gravity!
@@ -67,6 +69,8 @@ tspan = (0.0, 10.0)
 dx = 0.5
 prob_newton = SecondOrderODEProblem(newton_gravity, dx0, x0, tspan)
 sol_newton = solve(prob_newton, saveat=dx)
+
+@info "Solved ODE problem!"
 
 #ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
 ϵ = 0.1
@@ -95,6 +99,8 @@ function additional_loss(phi, θ, p)
     prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
     sol = solve(prob, Rosenbrock23(), saveat=dx)
 
+    println("solved!")
+
     # match data to newton solution and add to loss function
     # extract appropriate time data
     sol_nts = [[sol_newton[i][4], sol_newton[i][5], sol_newton[i][6]] for i in eachindex(sol_newton)]
@@ -103,6 +109,8 @@ function additional_loss(phi, θ, p)
     loss_term = sum(sqrt((sol_nts[i][1]-sol_ts[i][1])^2 + 
                     (sol_nts[i][2]-sol_ts[i][2])^2 + 
                         (sol_nts[i][3]-sol_ts[i][3])^2) for i in eachindex(sol_ts))
+    
+    println(loss_term)
     return loss_term;
 end
 
@@ -117,11 +125,13 @@ chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation),
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
 # discretize
-strategy = QuasiRandomTraining(100)
+strategy = QuasiRandomTraining(20)
 #strategy = QuadratureTraining()
 discretization = PhysicsInformedNN(chains, strategy,
     additional_loss=additional_loss)
 @time prob = discretize(pde_sys, discretization)
+
+@info "Discretization complete. Beginning training"
 
 # some decoration for reporting the loss
 i = 0
@@ -130,6 +140,8 @@ loss_history = []
 # solve the problem!
 res = Optimization.solve(prob, ADAM(1e-3); callback = callback, maxiters=2)
 phi = discretization.phi
+
+@info "Training complete. Beginning analysis"
 
 # -------------------------------------------------------------------------------------
 ## plot loss as a function of Epoch
