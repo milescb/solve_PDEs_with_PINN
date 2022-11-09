@@ -9,6 +9,7 @@ make our solution match Newtonian gravity, we consider a solution to classical
 =#
 using NeuralPDE, Lux, ModelingToolkit
 using DifferentialEquations, Statistics, SciMLSensitivity
+using Random, CUDA
 using Optimization, OptimizationOptimisers, OptimizationOptimJL
 import ModelingToolkit: Interval, infimum, supremum
 
@@ -62,7 +63,7 @@ end
 
 # initial conditions
 x0 = [0.0, 1.0, 0.0] # units of AU
-dx0 = [0.0, 0.0, 0.01] # units of AU/yr
+dx0 = [0.0, 0.0, 10.0] # units of AU/yr
 tspan = (0.0, 10.0)
 
 # solve problem
@@ -124,11 +125,14 @@ chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation),
             Lux.Dense(nnodes, nnodes, activation),
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
+# run training on GPU if actailible 
+ps = [Lux.setup(Random.default_rng(), chains[i])[1] for i in 1:numChains]
+ps = [ps[i] |> Lux.ComponentArray |> gpu .|> Float32 for i in 1:numChains]
+
 # discretize
 strategy = QuasiRandomTraining(20)
-#strategy = QuadratureTraining()
 discretization = PhysicsInformedNN(chains, strategy,
-    additional_loss=additional_loss)
+    additional_loss=additional_loss, init_params = ps)
 @time prob = discretize(pde_sys, discretization)
 
 @info "Discretization complete. Beginning training"
