@@ -9,11 +9,9 @@ make our solution match Newtonian gravity, we consider a solution to classical
 =#
 using NeuralPDE, Lux, ModelingToolkit
 using DifferentialEquations, Statistics, SciMLSensitivity
-using Random, CUDA
+using Random, CUDA, StaticArrays
 using Optimization, OptimizationOptimisers, OptimizationOptimJL
 import ModelingToolkit: Interval, infimum, supremum
-
-using Plots, LaTeXStrings
 
 include("../utils/general_utils.jl")
 
@@ -70,11 +68,15 @@ tspan = (0.0, 10.0)
 dx = 0.5
 prob_newton = SecondOrderODEProblem(newton_gravity, dx0, x0, tspan)
 sol_newton = solve(prob_newton, saveat=dx)
+sol_nts = [[sol_newton[i][4], sol_newton[i][5], sol_newton[i][6]] for i in eachindex(sol_newton)]
 
 @info "Solved ODE problem!"
 
-#ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
-ϵ = 0.1
+function distance3(x1,x2,y1,y2,z1,z2)
+    return sqrt((x1-x2)^2 + (y1-y2)^2 + (z1-z2)^2)
+end
+
+ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
 """
     additional_loss(phi,θ,p)
 
@@ -87,32 +89,25 @@ function additional_loss(phi, θ, p)
 
     # set-up the problem using current 
     function simple_geodesic(ddu,du,u,p,t)
-        r = sqrt(u[1]^2 + u[2]^2 + u[3]^2)
-        x = u[1]
-        y = u[2]
-        z = u[3]
-        ddu[1] = -(c^2)/2 * (g00(x+ϵ,y,z) - g00(x,y,z))/ϵ
-        ddu[2] = -(c^2)/2 * (g00(x,y+ϵ,z) - g00(x,y,z))/ϵ
-        ddu[3] = -(c^2)/2 * (g00(x,y+ϵ,z) - g00(x,y,z))/ϵ
+        ddu[1] = -(c^2)/2 * ((g00(u[1]+ϵ,u[2],u[3]) - g00(u[1],u[2],u[3]))/ϵ)
+        ddu[2] = -(c^2)/2 * ((g00(u[1],u[2]+ϵ,u[3]) - g00(u[1],u[2],u[3]))/ϵ)
+        ddu[3] = -(c^2)/2 * ((g00(u[1],u[2],u[3]+ϵ) - g00(u[1],u[2],u[3]))/ϵ)
     end
 
     # solve system of diff-eqs 
     prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob, Rosenbrock23(), saveat=dx)
+    sol = solve(prob, Rosenbrock23(), reltol=0.1, abstol=0.1, saveat=dx)
 
-    #println("solved!")
 
     # match data to newton solution and add to loss function
     # extract appropriate time data
-    sol_nts = [[sol_newton[i][4], sol_newton[i][5], sol_newton[i][6]] for i in eachindex(sol_newton)]
-    sol_ts = [[sol[i][4], sol[i][5], sol[i][6]] for i in eachindex(sol_newton)]
+    # sol_ts = [[sol[i][4], sol[i][5], sol[i][6]] for i in eachindex(sol_newton)]
 
-    loss_term = sum(sqrt((sol_nts[i][1]-sol_ts[i][1])^2 + 
-                    (sol_nts[i][2]-sol_ts[i][2])^2 + 
-                        (sol_nts[i][3]-sol_ts[i][3])^2) for i in eachindex(sol_ts))
+    # loss_term = sum(distance3(sol_nts[i][1],sol_ts[i][1],
+    #     sol_nts[i][2],sol_ts[i][2],sol_nts[i][3],sol_ts[i][3]) for i in eachindex(sol_ts))
     
     #println(loss_term)
-    return loss_term;
+    return sum(abs2, sol_nts[1][1] - sol[1][1])
 end
 
 # -------------------------------------------------------------------------------------
@@ -120,9 +115,8 @@ end
 numChains = length(vars)
 dim = length(domains) # number of dimensions
 activation = Lux.σ
-nnodes = 15
+nnodes = 10
 chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation), 
-            Lux.Dense(nnodes, nnodes, activation),
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
 # run training on GPU if actailible 
@@ -148,6 +142,8 @@ phi = discretization.phi
 @info "Training complete. Beginning analysis"
 
 # -------------------------------------------------------------------------------------
+using Plots, LaTeXStrings
+
 ## plot loss as a function of Epoch
 plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss",
         size=(400,400), dpi=200, label="")
