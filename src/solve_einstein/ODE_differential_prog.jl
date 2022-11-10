@@ -116,6 +116,7 @@ chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation),
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
 # run training on GPU if actailible 
+CUDA.allowscalar(false)
 ps = [Lux.setup(Random.default_rng(), chains[i])[1] for i in 1:numChains]
 ps = [ps[i] |> Lux.ComponentArray |> gpu .|> Float32 for i in 1:numChains]
 
