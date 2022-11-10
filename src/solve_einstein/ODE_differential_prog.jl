@@ -53,27 +53,31 @@ domains = [r ∈ Interval(r_min, r_max)]
 # -------------------------------------------------------------------------------------
 # Solve for Newtonian Gravity!
 function newton_gravity(ddu,du,u,p,t)
-    r = sqrt(u[1]^2 + u[2]^2 + u[3]^2)
+    r = sqrt(u[1]^2 + u[2]^2)
     ddu[1] = GM*u[1]/r^1.5
     ddu[2] = GM*u[2]/r^1.5
-    ddu[3] = GM*u[3]/r^1.5
 end
 
 # initial conditions
-x0 = [0.0, 1.0, 0.0] # units of AU
-dx0 = [0.0, 0.0, 10.0] # units of AU/yr
+x0 = [1.0, 0.0] # units of AU
+dx0 = [0.0, 10.0] # units of AU/yr
 tspan = (0.0, 10.0)
 
 # solve problem
 dx = 0.5
 prob_newton = SecondOrderODEProblem(newton_gravity, dx0, x0, tspan)
-sol_newton = solve(prob_newton, saveat=dx)
-sol_nts = [[sol_newton[i][4], sol_newton[i][5], sol_newton[i][6]] for i in eachindex(sol_newton)]
+@time sol_newton = solve(prob_newton, saveat=dx)
+sol_nts = [[sol_newton[i][3], sol_newton[i][4]] for i in eachindex(sol_newton)]
 
 @info "Solved ODE problem!"
 
-function distance3(x1,x2,y1,y2,z1,z2)
-    return sqrt((x1-x2)^2 + (y1-y2)^2 + (z1-z2)^2)
+"""
+    distance2(x1,x2,y1,y2)
+
+Compute Euclidean distance between points (x1,y1) and (x2,y2)
+"""
+function distance2(x1,x2,y1,y2)
+    return sqrt((x1-x2)^2 + (y1-y2)^2)
 end
 
 ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
@@ -85,29 +89,24 @@ Term of loss function to match newtonian gravity!
 function additional_loss(phi, θ, p)
 
     # 00 component of metric from neural network
-    g00(x,y,z) = phi[1](sqrt(x^2 + y^2 + z^2), θ.depvar[:A])[1]
+    g00(x,y) = phi[1](sqrt(x^2+y^2), θ.depvar[:A])[1]
 
     # set-up the problem using current 
     function simple_geodesic(ddu,du,u,p,t)
-        ddu[1] = -(c^2)/2 * ((g00(u[1]+ϵ,u[2],u[3]) - g00(u[1],u[2],u[3]))/ϵ)
-        ddu[2] = -(c^2)/2 * ((g00(u[1],u[2]+ϵ,u[3]) - g00(u[1],u[2],u[3]))/ϵ)
-        ddu[3] = -(c^2)/2 * ((g00(u[1],u[2],u[3]+ϵ) - g00(u[1],u[2],u[3]))/ϵ)
+        ddu[1] = -(c^2)/2 * ((g00(u[1]+ϵ,u[2]) - g00(u[1],u[2]))/ϵ)
+        ddu[2] = -(c^2)/2 * ((g00(u[1],u[2]+ϵ) - g00(u[1],u[2]))/ϵ)
     end
+    # function simple_geodesic(ddu,du,u,p,t)
+    #     ddu[1] = -(c^2)/2 * ((phi[1](sqrt((u[1]+ϵ)^2 + u[2]^2), θ.depvar[:A])[1] - phi[1](sqrt(u[1]^2 + u[2]^2), θ.depvar[:A])[1])/ϵ)
+    #     ddu[2] = -(c^2)/2 * ((phi[1](sqrt((u[1])^2 + (u[2]+ϵ)^2), θ.depvar[:A])[1] - phi[1](sqrt(u[1]^2 + u[2]^2), θ.depvar[:A])[1])/ϵ)
+    # end
 
     # solve system of diff-eqs 
     prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob, Rosenbrock23(), reltol=0.1, abstol=0.1, saveat=dx)
+    sol = solve(prob, Tsit5(), reltol=0.1, abstol=0.1, saveat=dx)
 
-
-    # match data to newton solution and add to loss function
-    # extract appropriate time data
-    # sol_ts = [[sol[i][4], sol[i][5], sol[i][6]] for i in eachindex(sol_newton)]
-
-    # loss_term = sum(distance3(sol_nts[i][1],sol_ts[i][1],
-    #     sol_nts[i][2],sol_ts[i][2],sol_nts[i][3],sol_ts[i][3]) for i in eachindex(sol_ts))
-    
-    #println(loss_term)
-    return sum(abs2, sol_nts[1][1] - sol[1][1])
+    return sum(distance2(sol_nts[i][1],sol[i][3],
+        sol_nts[i][2],sol[i][4]) for i in eachindex(sol_nts))
 end
 
 # -------------------------------------------------------------------------------------
