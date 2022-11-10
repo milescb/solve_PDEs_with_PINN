@@ -99,7 +99,7 @@ function additional_loss(phi, θ, p)
 
     # solve system of diff-eqs 
     prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob, Tsit5(), reltol=0.01, abstol=0.01, saveat=dx)
+    sol = solve(prob, Rosenbrock23(), reltol=0.01, abstol=0.01, saveat=dx)
 
     return sum(distance2(sol_nts[i][1],sol[i][3],
         sol_nts[i][2],sol[i][4]) for i in eachindex(sol_nts))
