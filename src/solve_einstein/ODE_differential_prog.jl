@@ -84,7 +84,7 @@ end
 """
     additional_loss(phi,θ,p)
 
-Term of loss function to match newtonian gravity!
+Compute loss when matching solution to newtonian gravity. 
 """
 function additional_loss(phi, θ, p)
 
@@ -96,10 +96,6 @@ function additional_loss(phi, θ, p)
         ddu[1] = -(c^2)/2 * ((g00(u[1]+ϵ,u[2]) - g00(u[1],u[2]))/ϵ)
         ddu[2] = -(c^2)/2 * ((g00(u[1],u[2]+ϵ) - g00(u[1],u[2]))/ϵ)
     end
-    # function simple_geodesic(ddu,du,u,p,t)
-    #     ddu[1] = -(c^2)/2 * ((phi[1](sqrt((u[1]+ϵ)^2 + u[2]^2), θ.depvar[:A])[1] - phi[1](sqrt(u[1]^2 + u[2]^2), θ.depvar[:A])[1])/ϵ)
-    #     ddu[2] = -(c^2)/2 * ((phi[1](sqrt((u[1])^2 + (u[2]+ϵ)^2), θ.depvar[:A])[1] - phi[1](sqrt(u[1]^2 + u[2]^2), θ.depvar[:A])[1])/ϵ)
-    # end
 
     # solve system of diff-eqs 
     prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
@@ -135,7 +131,7 @@ i = 0
 loss_history = []
 
 # solve the problem!
-res = Optimization.solve(prob, ADAM(1e-3); callback = callback, maxiters=2)
+res = Optimization.solve(prob, ADAM(1e-4); callback = callback, maxiters=100)
 phi = discretization.phi
 
 @info "Training complete. Beginning analysis"
@@ -145,7 +141,7 @@ using Plots, LaTeXStrings
 
 ## plot loss as a function of Epoch
 plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss",
-        size=(400,400), dpi=200, label="")
+        size=(400,400), dpi=200, label="");
 savefig("./plots/EPE_ODE_solution/loss.png")
 
 ## Compare solution to analytic!
@@ -161,15 +157,15 @@ u_real = [[u_analytic(r)[i] for r in rs] for i in 1:numChains]
 u_predict = [[phi[i]([r], minimizers[i])[1] for r in rs] for i in 1:numChains]
 
 plot(rs, u_real[1], xlabel=L"r", ylabel=L"A(r)", label="True Solution",
-        size=(400,400), dpi=200, legend=:bottomright)
+        size=(400,400), dpi=200, legend=:bottomright);
 plot!(rs, u_predict[1], 
         label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[1], 
-            u_real[1])/length(u_predict[1]),digits=2))\$")
+            u_real[1])/length(u_predict[1]),digits=2))\$");
 savefig("./plots/EPE_ODE_solution/A.png")
 
 plot(rs, u_real[2], xlabel=L"r", ylabel=L"B(r)", label="True Solution",
-        size=(400,400), dpi=200, legend=:bottomright)
+        size=(400,400), dpi=200, legend=:bottomright);
 plot!(rs, u_predict[2], 
         label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[2], 
-            u_real[2])/length(u_predict[2]),digits=2))\$")
+            u_real[2])/length(u_predict[2]),digits=2))\$");
 savefig("./plots/EPE_ODE_solution/B.png")
