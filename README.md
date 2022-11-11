@@ -8,6 +8,7 @@ Find a list of the example problems we have solved or are working on below
 
 - Integral-PDE
 - PDAE
+- Linear, homogeneous PDE
 - Einstein field equations to find Schwarzschild metric (in development)
 
 ## Running the Code
