@@ -10,11 +10,11 @@ using Plots
 import ModelingToolkit: Interval
 using JLD2
 
-include("./utils/utils_einstein.jl")
+include("../utils/utils_einstein.jl")
 # although the inverse of a diagonal matrix is just the inverse 
 # of the diagonal elements, this allows for generalization if need-be
-include("./utils/compute_inverse_4x4.jl")
-include("./utils/general_utils.jl")
+include("../utils/compute_inverse_4x4.jl")
+include("../utils/general_utils.jl")
 
 # A collection of constants to be used 
 const G = 6.67e-11 # m²/kg²
