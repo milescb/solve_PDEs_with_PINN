@@ -45,9 +45,9 @@ callback = function (p,l)
     if i == 1
         @info "Initial loss is: $l"
     end
-    if i % 100 == 0
-        @info "Current loss is: $l"
-    end
+    #if i % 5 == 0
+    @info "Current loss at epoch $i is: $l"
+    #end
     append!(loss_history, l)
     return false
 end

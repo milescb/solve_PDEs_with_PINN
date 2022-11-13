@@ -13,7 +13,7 @@ using Random, CUDA, StaticArrays
 using Optimization, OptimizationOptimisers, OptimizationOptimJL
 import ModelingToolkit: Interval, infimum, supremum
 
-using Plots, LaTeXStrings
+using Plots, LaTeXStrings, JLD2
 
 include("../utils/general_utils.jl")
 
@@ -66,10 +66,10 @@ end
 # initial conditions
 x0 = [r_peri, 0.f0] # units of AU
 dx0 = [0.f0, v_peri] # units of AU/yr
-tspan = (0.f0, 10.f0)
+tspan = (0.f0, 1.f0)
 
 # solve problem
-dx = 0.4
+dx = 0.1
 prob_newton = SecondOrderODEProblem(newton_gravity, dx0, x0, tspan)
 @time sol_newton = solve(prob_newton, Tsit5(), saveat=dx)
 sol_nts = [[sol_newton[i][3], sol_newton[i][4]] for i in eachindex(sol_newton)]
@@ -90,6 +90,7 @@ function distance2(x1,x2,y1,y2)
 end
 
 ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
+ϵ = 0.1f0
 """
     additional_loss(phi,θ,p)
 
@@ -104,16 +105,22 @@ function additional_loss(phi, θ, p)
     function simple_geodesic(ddu,du,u,p,t)
         # ddu[1] = -(c^2/2) * g00(u[1], u[2])
         # ddu[2] = -(c^2/2) * g00(u[1], u[2])
-        ddu[1] = (c^2/2) * ((g00(u[1]+ϵ,u[2]) - g00(u[1]-ϵ,u[2]))/2ϵ)
-        ddu[2] = (c^2/2) * ((g00(u[1],u[2]+ϵ) - g00(u[1],u[2]-ϵ))/2ϵ)
+        ddu[1] = -(c^2/2) * ((g00(u[1]+ϵ,u[2]) - g00(u[1]-ϵ,u[2]))/2ϵ)
+        ddu[2] = -(c^2/2) * ((g00(u[1],u[2]+ϵ) - g00(u[1],u[2]-ϵ))/2ϵ)
     end
 
     # solve system of diff-eqs 
     prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob, Rosenbrock32(), reltol=1e-1, abstol=1e-1, saveat=dx)
+    sol = solve(prob, Rosenbrock32(), reltol=1e-3, abstol=1e-3, saveat=dx)
+
+    if length(sol) > length(sol_nts)
+        iter = length(sol_nts)
+    else 
+        iter = length(sol)
+    end
 
     return 0.1 * sum(distance2(sol_nts[i][1],sol[i][3],
-        sol_nts[i][2],sol[i][4]) for i in eachindex(sol_nts))
+        sol_nts[i][2],sol[i][4]) for i in 1:iter)
 end
 
 # -------------------------------------------------------------------------------------
@@ -123,7 +130,7 @@ dim = length(domains) # number of dimensions
 activation = Lux.σ
 nnodes = 10
 chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation), 
-            Lux.Dense(nnodes, nnodes, activation),
+#            Lux.Dense(nnodes, nnodes, activation),
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
 # run training on GPU if availible
@@ -146,8 +153,12 @@ i = 0
 loss_history = []
 
 # solve the problem!
-res = Optimization.solve(prob, ADAM(1e-3); callback = callback, maxiters=100)
+# maybe try LBFGS alg?
+res = Optimization.solve(prob, BFGS(); callback = callback, maxiters=15)
 phi = discretization.phi
+
+save_training_files("./trained_networks/EFE_ODE_diff")
+save_object("./trained_networks/EFE_ODE_diff/init_params.jld2", ps)
 
 @info "Training complete. Beginning analysis"
 
@@ -170,14 +181,14 @@ u_real = [[u_analytic(r)[i] for r in rs] for i in 1:numChains]
 u_predict = [[phi[i]([r], minimizers[i])[1] for r in rs] for i in 1:numChains]
 
 plot(rs, u_real[1], xlabel=L"r", ylabel=L"A(r)", label="True Solution",
-        size=(400,400), dpi=200)
+        size=(400,400), dpi=200, legend=:bottomright)
 plot!(rs, u_predict[1], 
         label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[1], 
             u_real[1])/length(u_predict[1]),digits=2))\$")
 savefig("./plots/EPE_ODE_solution/A.png")
 
 plot(rs, u_real[2], xlabel=L"r", ylabel=L"B(r)", label="True Solution",
-        size=(400,400), dpi=200)
+        size=(400,400), dpi=200, legend=:right)
 plot!(rs, u_predict[2], 
         label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[2], 
             u_real[2])/length(u_predict[2]),digits=2))\$")
