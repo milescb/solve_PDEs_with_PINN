@@ -25,9 +25,8 @@ const yr = 3.154e7 #seconds
 # change units
 const GM = Float32(G*M*yr^2 / AU^3) # AU^3/yr^2; Kepler III says this is 4π^2
 const c = Float32(3e8 * (yr/AU)) # AU / yr
-const r_peri = 0.98f0 # AU
-const semi_major = 1.f0
-const v_peri = sqrt(GM * ((2.f0/r_peri) - (1.f0/semi_major)))
+const r0 = 40.f0 # AU
+const v0 = 500.f0 # AU / year
 const ricci_r = 2*GM/c^2
 
 @parameters r
@@ -64,14 +63,14 @@ function newton_gravity(ddu,du,u,p,t)
 end
 
 # initial conditions
-x0 = [40.f0, 0.f0] # units of AU
-dx0 = [0.f0, 500.f0] # units of AU/yr
+x0 = [r0, 0.f0] # units of AU
+dx0 = [0.f0, v0] # units of AU/yr
 tspan = (0.f0, 0.1f0)
 
 # solve problem
 dx = 0.01
 prob_newton = SecondOrderODEProblem(newton_gravity, dx0, x0, tspan)
-@time sol_newton = solve(prob_newton, Tsit5(), dt=dx, saveat=dx, alias_u0=true)
+@time sol_newton = solve(prob_newton, Tsit5(), dt=dx, saveat=dx)
 sol_nts = [[sol_newton[i][3], sol_newton[i][4]] for i in eachindex(sol_newton)]
 
 plot(getindex.(sol_nts,1),getindex.(sol_nts,2), label="", size=(400,400), dpi=200,
@@ -109,11 +108,15 @@ function additional_loss(phi, θ, p)
 
     # solve system of diff-eqs 
     prob_ode = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob_ode, Rosenbrock32(), saveat=dx, dt=0.1)
-    #alias_u0=true
+    sol = solve(prob_ode, Rosenbrock32(), saveat=dx, dt=dx)
 
+    # hack to avoid differing lengths when problem not well defined
     if length(sol) > length(sol_nts)
+        @warn "length of temp solution too long"
         iter = length(sol_nts)
+    elseif length(sol) < length(sol_nts)
+        @warn "length of temp solution too short"
+        iter = length(sol)
     else 
         iter = length(sol)
     end
@@ -129,20 +132,12 @@ dim = length(domains) # number of dimensions
 activation = Lux.σ
 nnodes = 10
 chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation), 
-#            Lux.Dense(nnodes, nnodes, activation),
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
 # run training on GPU if availible
 # CUDA.allowscalar(false)
 # ps = [Lux.setup(Random.default_rng(), chains[i])[1] for i in 1:numChains]
 # ps = [ps[i] |> Lux.ComponentArray |> gpu .|> Float32 for i in 1:numChains]
-
-# discretize
-#strategy = QuasiRandomTraining(100)
-#strategy = GridTraining(0.1)
-#strategy = QuadratureTraining()
-#discretization = PhysicsInformedNN(chains, strategy)
-#@time prob = discretize(pde_sys, discretization)
 
 @info "Discretization complete. Beginning training"
 
