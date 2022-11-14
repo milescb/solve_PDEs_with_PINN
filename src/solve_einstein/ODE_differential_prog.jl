@@ -71,11 +71,11 @@ tspan = (0.f0, 0.1f0)
 # solve problem
 dx = 0.01
 prob_newton = SecondOrderODEProblem(newton_gravity, dx0, x0, tspan)
-@time sol_newton = solve(prob_newton, Tsit5(), dt=dx, saveat=dx, maxiters=5)
+@time sol_newton = solve(prob_newton, Tsit5(), dt=dx, saveat=dx, alias_u0=true)
 sol_nts = [[sol_newton[i][3], sol_newton[i][4]] for i in eachindex(sol_newton)]
 
 plot(getindex.(sol_nts,1),getindex.(sol_nts,2), label="", size=(400,400), dpi=200,
-        xlabel="\$x\$ (AU)", ylabel="\$y\$ (AU)")
+        xlabel="\$x\$ (AU)", ylabel="\$y\$ (AU)");
 savefig("./plots/EPE_ODE_solution/newton_solution.png")
 
 @info "Solved ODE problem!"
@@ -89,8 +89,8 @@ function distance2(x1,x2,y1,y2)
     return sqrt((x1-x2)^2 + (y1-y2)^2)
 end
 
-ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
-ϵ = 0.1f0
+#ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
+ϵ = 0.01f0
 """
     additional_loss(phi,θ,p)
 
@@ -108,8 +108,9 @@ function additional_loss(phi, θ, p)
     end
 
     # solve system of diff-eqs 
-    prob = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob, Rosenbrock32(), saveat=dx, dt=dx)
+    prob_ode = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
+    sol = solve(prob_ode, Rosenbrock32(), saveat=dx, dt=0.1)
+    #alias_u0=true
 
     if length(sol) > length(sol_nts)
         iter = length(sol_nts)
@@ -160,11 +161,11 @@ discretization = PhysicsInformedNN(chains, strategy,
     additional_loss=additional_loss)
 @time prob = discretize(pde_sys, discretization)
 
-# prob = remake(prob, u0=res.minimizer)
-res = Optimization.solve(prob, BFGS(); callback = callback, maxiters=20)
+#prob = remake(prob, u0=res.minimizer)
+res = Optimization.solve(prob, BFGS(); callback = callback, maxiters=15)
 phi = discretization.phi
 
-save_training_files("./trained_networks/EFE_ODE_diff")
+#save_training_files("./trained_networks/EFE_ODE_diff")
 #save_object("./trained_networks/EFE_ODE_diff/init_params.jld2", ps)
 
 @info "Training complete. Beginning analysis"
@@ -191,12 +192,12 @@ plot(rs, u_real[1], xlabel=L"r", ylabel=L"A(r)", label="True Solution",
         size=(400,400), dpi=200, legend=:right)
 plot!(rs, u_predict[1], 
         label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[1], 
-            u_real[1]),digits=2))/$(length(u_predict[1]))\$")
+            u_real[1])/length(u_predict[1]),digits=2))\$")
 savefig("./plots/EPE_ODE_solution/A.png")
 
 plot(rs, u_real[2], xlabel=L"r", ylabel=L"B(r)", label="True Solution",
         size=(400,400), dpi=200, legend=:right)
 plot!(rs, u_predict[2], 
         label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[2], 
-            u_real[2]),digits=2))/$(length(u_predict[1]))\$")
+            u_real[2])/length(u_predict[2]),digits=2))\$")
 savefig("./plots/EPE_ODE_solution/B.png")
