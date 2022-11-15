@@ -9,7 +9,6 @@ make our solution match Newtonian gravity, we consider a solution to classical
 =#
 using NeuralPDE, Lux, ModelingToolkit
 using DifferentialEquations, Statistics, SciMLSensitivity
-using Random, CUDA, StaticArrays
 using Optimization, OptimizationOptimisers, OptimizationOptimJL
 import ModelingToolkit: Interval, infimum, supremum
 
@@ -22,12 +21,12 @@ const G = 6.67e-11 # m²/kg²
 const M = 1.989e+35 #kg
 const AU = 1.496e11 # meters
 const yr = 3.154e7 #seconds
-# change units
+# change units, use AU and years
 const GM = Float32(G*M*yr^2 / AU^3) # AU^3/yr^2; Kepler III says this is 4π^2
 const c = Float32(3e8 * (yr/AU)) # AU / yr
 const r0 = 40.f0 # AU
 const v0 = 500.f0 # AU / year
-const ricci_r = 2*GM/c^2
+const ricci_r = 2*GM/c^2 # AU
 
 @parameters r
 vars = @variables A(..) B(..)
@@ -79,21 +78,11 @@ savefig("./plots/EPE_ODE_solution/newton_solution.png")
 
 @info "Solved ODE problem!"
 
-"""
-    distance2(x1,x2,y1,y2)
-
-Compute Euclidean distance between points (x1,y1) and (x2,y2)
-"""
-function distance2(x1,x2,y1,y2)
-    return sqrt((x1-x2)^2 + (y1-y2)^2)
-end
-
-#ϵ = sqrt(eps(Float32)) # machine epsilon for derivative
-ϵ = 0.01f0
+ϵ = 0.1f0 # smaller epsilon results in seg fault
 """
     additional_loss(phi,θ,p)
 
-Compute loss when matching solution to newtonian gravity. 
+Compute additional loss when matching solution to newtonian gravity. 
 """
 function additional_loss(phi, θ, p)
 
@@ -110,7 +99,7 @@ function additional_loss(phi, θ, p)
     prob_ode = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
     sol = solve(prob_ode, Rosenbrock32(), saveat=dx, dt=dx)
 
-    # hack to avoid differing lengths when problem not well defined
+    # hack to avoid differing lengths when error dt less than dmin
     if length(sol) > length(sol_nts)
         @warn "length of temp solution too long"
         iter = length(sol_nts)
@@ -134,21 +123,19 @@ nnodes = 10
 chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation), 
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
-# run training on GPU if availible
+#= 
+Run training on GPU if availible.
+Note that the operations above may not work on the GPU! If use of GPU is desired, 
+uncomment the below code and add the argument `init_params = ps` to function 
+`PhysicsInformedNN`.
+=#
+# using Random, CUDA
 # CUDA.allowscalar(false)
 # ps = [Lux.setup(Random.default_rng(), chains[i])[1] for i in 1:numChains]
 # ps = [ps[i] |> Lux.ComponentArray |> gpu .|> Float32 for i in 1:numChains]
 
 @info "Discretization complete. Beginning training"
 
-# some decoration for reporting the loss
-i = 0
-loss_history = []
-
-# solve the problem! First stab without extra loss function
-# res = Optimization.solve(prob, ADAM(1e-3); callback = callback, maxiters=500)
-
-#@named pde_sys = PDESystem([A(r)~A(r),B(r)~B(r)], [A(r)~A(r),B(r)~B(r)], domains, [r], [A(r), B(r)])
 strategy = QuasiRandomTraining(20)
 #strategy = GridTraining(0.1)
 #strategy = QuadratureTraining()
@@ -156,43 +143,11 @@ discretization = PhysicsInformedNN(chains, strategy,
     additional_loss=additional_loss)
 @time prob = discretize(pde_sys, discretization)
 
-#prob = remake(prob, u0=res.minimizer)
+# some decoration for reporting the loss. Required by callback function
+i = 0
+loss_history = []
+
 res = Optimization.solve(prob, BFGS(); callback = callback, maxiters=15)
 phi = discretization.phi
 
 #save_training_files("./trained_networks/EFE_ODE_diff")
-#save_object("./trained_networks/EFE_ODE_diff/init_params.jld2", ps)
-
-@info "Training complete. Beginning analysis"
-
-# -------------------------------------------------------------------------------------
-## plot loss as a function of Epoch
-plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss",
-        size=(400,400), dpi=200, label="")
-savefig("./plots/EPE_ODE_solution/loss.png")
-
-## Compare solution to analytic!
-u_analytic(ρ) = [1 - ricci_r/ρ, -1/(1 - ricci_r/ρ)]
-
-dep_vars = [:A, :B]
-minimizers = [res.u.depvar[dep_vars[i]] for i in eachindex(dep_vars)]
-
-dr = 0.01
-rs = [infimum(d.domain):dr:supremum(d.domain) for d in domains][1]
-
-u_real = [[u_analytic(r)[i] for r in rs] for i in 1:2]
-u_predict = [[phi[i]([r], minimizers[i])[1] for r in rs] for i in 1:numChains]
-
-plot(rs, u_real[1], xlabel=L"r", ylabel=L"A(r)", label="True Solution",
-        size=(400,400), dpi=200, legend=:right)
-plot!(rs, u_predict[1], 
-        label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[1], 
-            u_real[1])/length(u_predict[1]),digits=2))\$")
-savefig("./plots/EPE_ODE_solution/A.png")
-
-plot(rs, u_real[2], xlabel=L"r", ylabel=L"B(r)", label="True Solution",
-        size=(400,400), dpi=200, legend=:right)
-plot!(rs, u_predict[2], 
-        label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[2], 
-            u_real[2])/length(u_predict[2]),digits=2))\$")
-savefig("./plots/EPE_ODE_solution/B.png")
