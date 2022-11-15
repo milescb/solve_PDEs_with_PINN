@@ -12,8 +12,8 @@ After this solving is complete, we take the distance between the points found an
 given by Newton and add the square of the distance to the loss function. 
 =#
 using SciMLSensitivity
+using Zygote
 
-ϵ = 0.1f0 # smaller epsilon results in seg fault
 """
     additional_loss(phi,θ,p)
 
@@ -32,15 +32,16 @@ function additional_loss(phi, θ, p)
 
     # set-up the problem using current metric
     function simple_geodesic(ddu,du,u,p,t)
-        # derivate is done with discrete methods
-        ddu[1] = (c^2/2) * ((g00(u[1]+ϵ,u[2]) - g00(u[1]-ϵ,u[2]))/2ϵ)
-        ddu[2] = (c^2/2) * ((g00(u[1],u[2]+ϵ) - g00(u[1],u[2]-ϵ))/2ϵ)
+        # take derivative with Zygote
+        grad = Zygote.gradient((x,y) -> g00(x,y), u[1], u[2])
+        ddu[1] = (c^2/2) * grad[1]
+        ddu[2] = (c^2/2) * grad[2]
     end
 
     # solve system of diff-eqs. `saveat` and `dt` keywords are required to
     # avoid costly interpolation. 
     prob_ode = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob_ode, Rosenbrock32(), saveat=dx, dt=dx)
+    sol = solve(prob_ode, Rosenbrock23(), saveat=dx, dt=dx)
 
     # hack to avoid differing lengths when warning dt <= dtmin
     # usually not used / necessary 

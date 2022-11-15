@@ -18,7 +18,7 @@ using DifferentialEquations
 using Optimization, OptimizationOptimisers, OptimizationOptimJL
 import ModelingToolkit: Interval, infimum, supremum
 
-using JLD2
+using Plots, JLD2
 
 include("../utils/general_utils.jl")
 
@@ -31,13 +31,18 @@ vars = @variables A(..) B(..)
 Dr = Differential(r)
 Drr = Differential(r)^2
 
+# eqns = [
+#     4.f0*Dr(A(r))*((B(r))^2) - 2.f0*r*Drr(B(r))*A(r)*B(r) + 2.f0*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) ~ 0.f0,
+#     r*Dr(A(r))*B(r) + 2.f0*((A(r))^2)*B(r) - 2.f0*A(r)*B(r) - r*Dr(B(r))*A(r) ~ 0.f0,
+#     -2.f0*r*Drr(B(r))*A(r)*B(r) + r*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) - 4.f0*Dr(B(r))*A(r)*B(r) ~ 0.f0
+# ]
 eqns = [
-    4.f0*Dr(A(r))*((B(r))^2) - 2.f0*r*Drr(B(r))*A(r)*B(r) + 2.f0*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) ~ 0.f0,
-    r*Dr(A(r))*B(r) + 2.f0*((A(r))^2)*B(r) - 2.f0*A(r)*B(r) - r*Dr(B(r))*A(r) ~ 0.f0,
-    -2.f0*r*Drr(B(r))*A(r)*B(r) + r*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) - 4.f0*Dr(B(r))*A(r)*B(r) ~ 0.f0
+    2.f0*r*A(r)*B(r)*Drr(A(r)) - r*A(r)*Dr(A(r))*Dr(B(r)) + 4.f0*A(r)*B(r)*Dr(A(r)) - r*B(r)*(Dr(A(r)))^2 ~ 0.f0,
+    -2.f0*r*A(r)*B(r)*Drr(A(r)) + r*A(r)*Dr(A(r))*Dr(B(r)) + 4.f0*((A(r))^2)*Dr(B(r)) + r*B(r)*(Dr(A(r)))^2 ~ 0.f0,
+    -2.f0*A(r)*B(r) + 2.f0*A(r)*(B(r))^2 - r*Dr(A(r))*B(r) + r*A(r)*Dr(B(r)) ~ 0.f0
 ]
 
-r_min = 1.f0
+r_min = 0.2f0
 r_max = 60.f0
 bcs = [
     B(r_max) ~ -1.f0,
@@ -85,7 +90,6 @@ numChains = length(vars)
 dim = length(domains) # number of dimensions
 activation = Lux.σ
 nnodes = 10
-rng = Random.default_rng()
 chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation), 
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
