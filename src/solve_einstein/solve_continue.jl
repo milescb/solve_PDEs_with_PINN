@@ -84,7 +84,7 @@ i = 0
 
 # remake problem with previously trained parameters
 prob = remake(prob, u0=res.minimizer)
-res = Optimization.solve(prob, ADAM(1e-3); callback = callback, maxiters=100)
+res = Optimization.solve(prob, BFGS(); callback = callback, maxiters=5)
 phi = discretization.phi
 
 #save_training_files("./trained_networks/EFE_ODE_diff")
