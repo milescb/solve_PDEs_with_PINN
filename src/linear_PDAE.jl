@@ -1,6 +1,15 @@
+#=
+Author: Miles Cochran-Branson
+Date: Fall 2022
+
+We solve the second test problem from the paper
+https://springerplus.springeropen.com/articles/10.1186/2193-1801-3-137.
+=#
 using NeuralPDE, ModelingToolkit, Optimization, Lux, OptimizationOptimisers
-using Plots, LaTeXStrings, Printf
+using Plots, LaTeXStrings
 import ModelingToolkit: Interval, infimum, supremum
+
+include("./utils/general_utils.jl")
 
 @parameters x t
 @variables u1(..) u2(..) u3(..)
@@ -44,14 +53,6 @@ discretization = PhysicsInformedNN(chains, strategy)
 
 i = 0
 loss = []
-callback = function (p,l)
-    global i += 1
-    if i % 100 == 0
-        println("Current loss is: $l")
-    end
-    append!(loss, l)
-    return false
-end
 
 # Training
 res = @time Optimization.solve(prob, ADAM(0.1); callback = callback, maxiters=5000)
