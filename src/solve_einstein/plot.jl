@@ -1,4 +1,6 @@
 using Plots, LaTeXStrings, JLD2
+
+# unfortunately, you have to load these for JLD2 to properly load objects
 using NeuralPDE, ModelingToolkit, Lux
 using Optimization, OptimizationOptimisers, OptimizationOptimJL
 import ModelingToolkit: Interval, infimum, supremum
@@ -6,9 +8,11 @@ import ModelingToolkit: Interval, infimum, supremum
 @parameters r
 @variables A(..) B(..)
 
-const ricci_r = 0.001971
+# constants for problem
+include("constants.jl")
 
 include("../utils/general_utils.jl")
+include("additional_loss.jl")
 
 discretization, phi, res, loss_history, domains = load_training_files("./trained_networks/EFE_ODE_diff")
 
