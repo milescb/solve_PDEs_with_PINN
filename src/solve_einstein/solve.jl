@@ -13,7 +13,7 @@ and further explanation can be found there.
 Training files can be saved and used later for continued training with the file 
 `solve_continue.jl`, or analysis and plots can be made with `plot.jl`. 
 =#
-using NeuralPDE, Lux, ModelingToolkit
+using NeuralPDE, Lux, ModelingToolkit, Random
 using DifferentialEquations
 using Optimization, OptimizationOptimisers, OptimizationOptimJL
 import ModelingToolkit: Interval, infimum, supremum
@@ -37,7 +37,7 @@ eqns = [
     -2.f0*r*Drr(B(r))*A(r)*B(r) + r*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) - 4.f0*Dr(B(r))*A(r)*B(r) ~ 0.f0
 ]
 
-r_min = 0.1f0
+r_min = 1.f0
 r_max = 60.f0
 bcs = [
     B(r_max) ~ -1.f0,
@@ -85,19 +85,25 @@ numChains = length(vars)
 dim = length(domains) # number of dimensions
 activation = Lux.σ
 nnodes = 10
+rng = Random.default_rng()
 chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation), 
             Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
 #= 
 Run training on GPU if availible.
+    
 Note that the operations above may not work on the GPU! If use of GPU is desired, 
 uncomment the below code and add the argument `init_params = ps` to function 
 `PhysicsInformedNN`.
+
+DOES NOT WORK ON MAC M1 MACHINES
 =#
 # using Random, CUDA
 # CUDA.allowscalar(false)
-# ps = [Lux.setup(Random.default_rng(), chains[i])[1] for i in 1:numChains]
 # ps = [ps[i] |> Lux.ComponentArray |> gpu .|> Float32 for i in 1:numChains]
+
+# ensure initial parameters are of type Float32
+ps = [Lux.setup(Random.default_rng(), chains[i])[1] |> Lux.ComponentArray .|> Float32 for i in 1:numChains]
 
 @info "Discretization complete. Beginning training"
 
@@ -105,7 +111,7 @@ strategy = QuasiRandomTraining(20)
 #strategy = GridTraining(0.1)
 #strategy = QuadratureTraining()
 discretization = PhysicsInformedNN(chains, strategy,
-    additional_loss=additional_loss)
+    additional_loss=additional_loss, init_params=ps)
 @time prob = discretize(pde_sys, discretization)
 
 # some decoration for reporting the loss. Required by callback function

@@ -1,6 +1,6 @@
 using Plots, LaTeXStrings, JLD2
 
-# unfortunately, you have to load these for JLD2 to properly load objects
+# unfortunately, you have to load these for JLD2 to properly load objects given in training
 using NeuralPDE, ModelingToolkit, Lux
 using Optimization, OptimizationOptimisers, OptimizationOptimJL
 import ModelingToolkit: Interval, infimum, supremum

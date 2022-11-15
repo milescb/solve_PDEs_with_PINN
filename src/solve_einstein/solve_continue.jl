@@ -64,9 +64,12 @@ include("additional_loss.jl")
 
 #= 
 Run training on GPU if availible.
+
 Note that the operations above may not work on the GPU! If use of GPU is desired, 
 uncomment the below code and add the argument `init_params = ps` to function 
 `PhysicsInformedNN`.
+
+DOES NOT WORK ON MAC M1 MACHINES
 =#
 # using Random, CUDA
 # CUDA.allowscalar(false)
@@ -80,11 +83,11 @@ discretization, phi, res, loss_history, domains = load_training_files("./trained
 
 # some decoration for reporting the loss. Required by callback function
 i = 0
-# loss_history = [] # uncomment to wipe current loss_history
+loss_history = [] # uncomment to wipe current loss_history
 
 # remake problem with previously trained parameters
 prob = remake(prob, u0=res.minimizer)
-res = Optimization.solve(prob, BFGS(); callback = callback, maxiters=5)
+res = Optimization.solve(prob, ADAM(1e-4); callback = callback, maxiters=25)
 phi = discretization.phi
 
 #save_training_files("./trained_networks/EFE_ODE_diff")
