@@ -9,7 +9,7 @@ Find a list of the example problems we have solved or are working on below
 - Integral-PDE
 - PDAE
 - Linear, homogeneous PDE
-- Einstein field equations to find Schwarzschild metric (in development)
+- Einstein field equations to find Schwarzschild metric. This problem has been solved in its most simple case. Continued work is needed in extending the problem. Find more information in the README in `src/solve_einstein`. 
 
 ## Running the Code
 
