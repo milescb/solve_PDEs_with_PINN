@@ -92,7 +92,7 @@ loss_history = [] # uncomment to wipe current loss_history
 
 # remake problem with previously trained parameters
 prob = remake(prob, u0=res.minimizer)
-res = Optimization.solve(prob, ADAM(1e-4); callback = callback, maxiters=25)
+res = Optimization.solve(prob, BFGS(); callback = callback, maxiters=5)
 phi = discretization.phi
 
-#save_training_files("./trained_networks/EFE_ODE_diff")
+save_training_files("./trained_networks/EFE_ODE_diff")

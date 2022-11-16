@@ -15,6 +15,17 @@ using SciMLSensitivity
 using Zygote
 
 """
+    g00(x,y,phi,θ)
+
+Extract g00 component from g matrix with input in Cartesian coords.
+
+Arguments `phi` and `θ` are the prediction and weights of the network. 
+Arguments `x` and `y` are Cartesian coords. Conversion to sphereical 
+coords. is done within the function. 
+"""
+g00(x,y,phi,θ) = phi[1](sqrt(x^2+y^2), θ.depvar[:A])[1]
+
+"""
     additional_loss(phi,θ,p)
 
 Compute additional loss when matching solution to newtonian gravity. 
@@ -26,22 +37,18 @@ Parameters:
 """
 function additional_loss(phi, θ, p)
 
-    # g00 component of metric from neural network.
-    # must convert from spherical to cartesian coords. 
-    g00(x,y) = phi[1](sqrt(x^2+y^2), θ.depvar[:A])[1]
-
     # set-up the problem using current metric
     function simple_geodesic(ddu,du,u,p,t)
         # take derivative with Zygote
-        grad = Zygote.gradient((x,y) -> g00(x,y), u[1], u[2])
-        ddu[1] = (c^2/2) * grad[1]
-        ddu[2] = (c^2/2) * grad[2]
+        grad = Zygote.gradient((x,y) -> g00(x,y,phi,θ), u[1], u[2])
+        ddu[1] = -(c^2/2) * grad[1]
+        ddu[2] = -(c^2/2) * grad[2]
     end
 
     # solve system of diff-eqs. `saveat` and `dt` keywords are required to
     # avoid costly interpolation. 
     prob_ode = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob_ode, Rosenbrock23(), saveat=dx, dt=dx)
+    sol = solve(prob_ode, Tsit5(), saveat=dx, dt=dx)
 
     # hack to avoid differing lengths when warning dt <= dtmin
     # usually not used / necessary 
