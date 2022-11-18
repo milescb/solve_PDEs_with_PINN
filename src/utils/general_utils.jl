@@ -87,7 +87,7 @@ end
 # ------------------------------------------------------------------------
 # Definition of callback function for training neural networks
 """
-    callback(p,l)
+    callback_every100(p,l)
 
 Return loss during optimization. 
 
@@ -107,7 +107,7 @@ callback_every100 = function (p,l)
 end
 
 """
-    callback_every(p,l)
+    callback(p,l)
 
 Return loss at each epoch during optimization. 
 
