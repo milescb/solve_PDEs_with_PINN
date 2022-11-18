@@ -70,13 +70,13 @@ function simple_geodesic(ddu,du,u,p,t)
     ddu[2] = -(c^2/2) * grad[2]
 end
 
-# solve system of diff-eqs. `saveat` and `dt` keywords are required to
-# avoid costly interpolation. 
+# solve ODE problem 
 prob_ode = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
 sol = solve(prob_ode, Tsit5())
 
 sol_ts = [[sol[i][3], sol[i][4]] for i in eachindex(sol)]
 
+# plot and compare to newton solution!
 plot(getindex.(sol_ts,1),getindex.(sol_ts,2), label="NN", size=(400,400), dpi=200,
         xlabel="\$x\$ (AU)", ylabel="\$y\$ (AU)")
 plot!(getindex.(sol_nts,1),getindex.(sol_nts,2), label="Newton", legend=:topleft)

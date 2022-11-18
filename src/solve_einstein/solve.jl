@@ -105,7 +105,7 @@ DOES NOT WORK ON MAC M1 MACHINES
 
 @info "Discretization complete. Beginning training"
 
-strategy = QuasiRandomTraining(40)
+strategy = QuasiRandomTraining(30)
 discretization = PhysicsInformedNN(chains, strategy, 
     additional_loss=additional_loss)
 @time prob = discretize(pde_sys, discretization)
