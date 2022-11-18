@@ -6,10 +6,11 @@ The differential equation we solve within the function is given by
 
     d²ᵢ x(t) = c² Γⁱ₀₀
     
-To compute the partial derivatives in Γⁱ₀₀, we use a discrete, very approximate
-derivate. This gives us a system of ODEs which can be solved by DifferentialEquations.jl. 
-After this solving is complete, we take the distance between the points found and those 
-given by Newton and add the square of the distance to the loss function. 
+To compute the partial derivatives in Γⁱ₀₀, we use Zygote.jl to compute uing 
+Automatic Differentiation. This gives us a system of ODEs which can be solved 
+by DifferentialEquations.jl. After this solving is complete, we take the 
+distance between the points found and those given by Newton and add the square 
+of the distance to the loss function. 
 =#
 using SciMLSensitivity, Zygote
 

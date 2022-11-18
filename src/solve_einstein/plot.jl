@@ -46,7 +46,7 @@ u_real = [[u_analytic(r)[i] for r in rs] for i in 1:2]
 u_predict = [[phi[i]([r], minimizers[i])[1] for r in rs] for i in 1:2]
 
 plot(rs, u_real[1], xlabel=L"r", ylabel=L"A(r)", label="True Solution",
-        size=(400,400), dpi=200, legend=:bottomright)
+        size=(400,400), dpi=200, legend=:topright)
 plot!(rs, u_predict[1], 
         label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[1], 
             u_real[1]),digits=2))/$(length(u_predict[1]))\$")
