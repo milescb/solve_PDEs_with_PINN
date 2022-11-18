@@ -60,15 +60,15 @@ i = 0
 loss_history = []
 
 learning_rates = [1e-3, 1e-4, 1e-7]
-res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=10000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback=callback_every100, maxiters=10000)
 loss_history1 = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=7000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback=callback_every100, maxiters=7000)
 loss_history2 = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=1000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback=callback_every100, maxiters=1000)
 loss_history3 = loss_history
 loss_history = vcat(loss_history1, loss_history2, loss_history3)
 phi = discretization.phi

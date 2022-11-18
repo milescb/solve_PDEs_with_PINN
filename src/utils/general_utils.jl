@@ -60,7 +60,7 @@ end
 """
     distance2(x1,x2,y1,y2)
 
-Compute Euclidean distance between points (x1,y1) and (x2,y2). 
+Compute squared Euclidean distance between points (x1,y1) and (x2,y2). 
 """
 function distance2(x1,x2,y1,y2)
     return ((x1-x2)^2 + (y1-y2)^2)
@@ -94,14 +94,29 @@ Return loss during optimization.
 Requires definition of a global interator, `i` and an empty 
 vector, 'loss_history` to store loss history. 
 """
-callback = function (p,l)
+callback_every100 = function (p,l)
     global i += 1
     if i == 1
         @info "Initial loss is: $l"
     end
-    #if i % 5 == 0
+    if i % 100 == 0
+        @info "Loss at epoch $i is: $l"
+    end
+    append!(loss_history, l)
+    return false
+end
+
+"""
+    callback_every(p,l)
+
+Return loss at each epoch during optimization. 
+
+Requires definition of a global interator, `i` and an empty 
+vector, 'loss_history` to store loss history. 
+"""
+callback = function (p,l)
+    global i += 1
     @info "Loss at epoch $i is: $l"
-    #end
     append!(loss_history, l)
     return false
 end

@@ -55,11 +55,11 @@ i = 0
 loss = []
 
 # Training
-res = @time Optimization.solve(prob, ADAM(0.1); callback = callback, maxiters=5000)
+res = @time Optimization.solve(prob, ADAM(0.1); callback=callback_every100, maxiters=5000)
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(0.01); callback = callback, maxiters=2000)
+res = @time Optimization.solve(prob, ADAM(0.01); callback=callback_every100, maxiters=2000)
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(0.0001); callback = callback, maxiters=2000)
+res = @time Optimization.solve(prob, ADAM(0.0001); callback=callback_every100, maxiters=2000)
 phi = discretization.phi
 
 ## ANALYSIS!!

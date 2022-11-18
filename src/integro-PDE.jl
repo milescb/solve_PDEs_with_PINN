@@ -77,15 +77,15 @@ loss_history = []
 learning_rates = [0.1, 0.01, 0.0001]
 
 # Training
-res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback = callback, maxiters=500)
+res = @time Optimization.solve(prob, ADAM(learning_rates[1]); callback=callback_every100, maxiters=500)
 loss1_history = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback = callback, maxiters=2000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[2]); callback=callback_every100, maxiters=2000)
 loss2_history = loss_history
 loss_history = []
 prob = remake(prob, u0=res.minimizer)
-res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback = callback, maxiters=2000)
+res = @time Optimization.solve(prob, ADAM(learning_rates[3]); callback=callback_every100, maxiters=2000)
 loss3_history = loss_history
 loss_history = vcat(loss1_history, loss2_history, loss3_history)
 phi = discretization.phi

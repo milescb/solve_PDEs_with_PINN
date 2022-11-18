@@ -30,8 +30,8 @@ discretization, phi, res, loss_history, domains = load_training_files("./trained
 # -------------------------------------------------------------------------------------
 ## plot loss as a function of Epoch
 plot(1:length(loss_history), loss_history, xlabel="Epoch", ylabel="Loss",
-        size=(400,400), dpi=200, label="")
-savefig("./plots/EPE_ODE_solution/loss.png")
+        size=(400,400), dpi=200, label="", yaxis=:log)
+savefig("./plots/EPE_ODE_solution/loss_before.png")
 
 # Define analytical solution
 u_analytic(ρ) = [1 - ricci_r/ρ, 1/(1 - ricci_r/ρ)]
@@ -46,18 +46,22 @@ u_real = [[u_analytic(r)[i] for r in rs] for i in 1:2]
 u_predict = [[phi[i]([r], minimizers[i])[1] for r in rs] for i in 1:2]
 
 plot(rs, u_real[1], xlabel=L"r", ylabel=L"A(r)", label="True Solution",
-        size=(400,400), dpi=200, legend=:topright)
+        size=(400,400), dpi=200, legend=:bottomright)
 plot!(rs, u_predict[1], 
         label="Predicted Solution, \$\\chi^2/dof = $(round(χ²(u_predict[1], 
             u_real[1]),digits=2))/$(length(u_predict[1]))\$")
-savefig("./plots/EPE_ODE_solution/A.png")
+plot!([ricci_r,ricci_r],[minimum(u_predict[1])-0.001, maximum(u_predict[1])+0.005],
+    label=L"r_s", line=(:dash, :grey))
+savefig("./plots/EPE_ODE_solution/A_before.png")
 
 plot(rs, u_real[2], xlabel=L"r", ylabel=L"B(r)", label="True Solution",
-        size=(400,400), dpi=200, legend=:topright)
+        size=(400,400), dpi=200, legend=:bottomright)
 plot!(rs, u_predict[2], 
         label="Predicted Solution,  \$\\chi^2/dof = $(round(χ²(u_predict[2], 
         u_real[1]),digits=2))/$(length(u_predict[2]))\$")
-savefig("./plots/EPE_ODE_solution/B.png")
+plot!([ricci_r,ricci_r],[minimum(u_predict[2])-0.001, maximum(u_predict[2])+0.001],
+        label=L"r_s", line=(:dash, :grey))
+savefig("./plots/EPE_ODE_solution/B_before.png")
 
 # -------------------------------------------------------------------------------------
 # How well do we match Newton? Let's find out
