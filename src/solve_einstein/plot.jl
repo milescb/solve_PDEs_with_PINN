@@ -7,7 +7,7 @@ well our implementation matches the analytical solutions. Additionally, we
 evaluate how well our solution matches newtonian gravity, thus giving some 
 idea on how well the condition required by the additional loss term is 
 being met. 
-    All plots are saved in the folder `src/plots`. 
+    All plots are saved in the folder `plots`. 
 =#
 using Plots, LaTeXStrings, JLD2
 
