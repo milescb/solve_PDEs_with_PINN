@@ -11,8 +11,7 @@ derivate. This gives us a system of ODEs which can be solved by DifferentialEqua
 After this solving is complete, we take the distance between the points found and those 
 given by Newton and add the square of the distance to the loss function. 
 =#
-using SciMLSensitivity
-using Zygote
+using SciMLSensitivity, Zygote
 
 """
     g00(x,y,phi,θ)
@@ -63,6 +62,6 @@ function additional_loss(phi, θ, p)
     end
 
     # take 10% of given loss so as to not have this term dominate
-    return 0.1 * sum(distance2(sol_nts[i][1],sol[i][3],
+    return 0.01 * sum(distance2(sol_nts[i][1],sol[i][3],
         sol_nts[i][2],sol[i][4]) for i in 1:iter)
 end

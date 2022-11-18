@@ -32,24 +32,15 @@ Dr = Differential(r)
 Drr = Differential(r)^2
 
 eqns = [
-    4.f0*Dr(A(r))*((B(r))^2) - 2.f0*r*Drr(B(r))*A(r)*B(r) + 2.f0*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) ~ 0.f0,
-    r*Dr(A(r))*B(r) + 2.f0*((A(r))^2)*B(r) - 2.f0*A(r)*B(r) - r*Dr(B(r))*A(r) ~ 0.f0,
-    -2.f0*r*Drr(B(r))*A(r)*B(r) + r*Dr(A(r))*Dr(B(r))*B(r) + r*((Dr(B(r)))^2)*A(r) - 4.f0*Dr(B(r))*A(r)*B(r) ~ 0.f0
+    2.f0*r*A(r)*B(r)*Drr(A(r)) - r*A(r)*Dr(A(r))*Dr(B(r)) + 4.f0*A(r)*B(r)*Dr(A(r)) - r*B(r)*(Dr(A(r)))^2 ~ 0.f0,
+    -2.f0*r*A(r)*B(r)*Drr(A(r)) + r*A(r)*Dr(A(r))*Dr(B(r)) + 4.f0*((A(r))^2)*Dr(B(r)) + r*B(r)*(Dr(A(r)))^2 ~ 0.f0,
+    -2.f0*A(r)*B(r) + 2.f0*A(r)*(B(r))^2 - r*Dr(A(r))*B(r) + r*A(r)*Dr(B(r)) ~ 0.f0
 ]
-# eqns = [
-#     2.f0*r*A(r)*B(r)*Drr(A(r)) - r*A(r)*Dr(A(r))*Dr(B(r)) + 4.f0*A(r)*B(r)*Dr(A(r)) - r*B(r)*(Dr(A(r)))^2 ~ 0.f0,
-#     -2.f0*r*A(r)*B(r)*Drr(A(r)) + r*A(r)*Dr(A(r))*Dr(B(r)) + 4.f0*((A(r))^2)*Dr(B(r)) + r*B(r)*(Dr(A(r)))^2 ~ 0.f0,
-#     -2.f0*A(r)*B(r) + 2.f0*A(r)*(B(r))^2 - r*Dr(A(r))*B(r) + r*A(r)*Dr(B(r)) ~ 0.f0
-# ]
-# eqns = [
-#     r*Dr(A(r)) + A(r) ~ 1,
-#     A(r)*B(r) ~ -1
-# ]
 
-r_min = 1.0f0
+r_min = 0.3f0
 r_max = 60.f0
 bcs = [
-    B(r_max) ~ -1.f0,
+    B(r_max) ~ 1.f0,
     A(r_max) ~ 1.f0,
 ]
 
@@ -68,18 +59,18 @@ function newton_gravity(ddu,du,u,p,t)
 end
 
 # initial conditions
-x0 = [20.f0, 0.f0] # units of AU
+x0 = [15.f0, 0.f0] # units of AU
 dx0 = [0.f0, 100.f0] # units of AU/yr
 tspan = (0.f0, 0.03f0)
 
 # solve problem
-dx = 0.003
+dx = 0.0025f0
 prob_newton = SecondOrderODEProblem(newton_gravity, dx0, x0, tspan)
-@time sol_newton = solve(prob_newton, Tsit5(), dt=dx, saveat=dx)
+@time sol_newton = solve(prob_newton, Tsit5(), dt=dx, saveat=dx);
 sol_nts = [[sol_newton[i][3], sol_newton[i][4]] for i in eachindex(sol_newton)]
 
 plot(getindex.(sol_nts,1),getindex.(sol_nts,2), label="", size=(400,400), dpi=200,
-        xlabel="\$x\$ (AU)", ylabel="\$y\$ (AU)")
+        xlabel="\$x\$ (AU)", ylabel="\$y\$ (AU)");
 savefig("./plots/EPE_ODE_solution/newton_solution.png")
 save_object("./trained_networks/EFE_ODE_diff/sol_nts.jld2", sol_nts)
 
@@ -94,9 +85,9 @@ numChains = length(vars)
 dim = length(domains) # number of dimensions
 activation = Lux.σ
 nnodes = 10
-chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation, init_weight=Lux.glorot_uniform), 
-            Lux.Dense(nnodes, nnodes, activation, init_weight=Lux.glorot_uniform),
-            Lux.Dense(nnodes, 1, init_weight=Lux.glorot_uniform)) for _ in 1:numChains]
+chains = [Lux.Chain(Lux.Dense(dim, nnodes, activation), 
+            Lux.Dense(nnodes, nnodes, activation),
+            Lux.Dense(nnodes, 1)) for _ in 1:numChains]
 
 #= 
 Run training on GPU if availible.
@@ -112,14 +103,11 @@ DOES NOT WORK ON MAC M1 MACHINES
 # ps = [Lux.setup(Random.default_rng(), chains[i])[1] for i in 1:numChains]
 # ps = [ps[i] |> Lux.ComponentArray |> gpu .|> Float32 for i in 1:numChains]
 
-# ensure initial parameters are of type Float32
-
 @info "Discretization complete. Beginning training"
 
-strategy = QuasiRandomTraining(20)
-#strategy = GridTraining(0.1)
-#strategy = QuadratureTraining()
-discretization = PhysicsInformedNN(chains, strategy)
+strategy = QuasiRandomTraining(40)
+discretization = PhysicsInformedNN(chains, strategy, 
+    additional_loss=additional_loss)
 @time prob = discretize(pde_sys, discretization)
 
 # some decoration for reporting the loss. Required by callback function
