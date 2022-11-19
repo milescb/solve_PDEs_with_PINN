@@ -52,7 +52,7 @@ discretization = PhysicsInformedNN(chains, strategy)
 @time prob = discretize(pde_sys, discretization)
 
 i = 0
-loss = []
+loss_history = []
 
 # Training
 res = @time Optimization.solve(prob, ADAM(0.1); callback=callback_every100, maxiters=5000)
