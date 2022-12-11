@@ -30,3 +30,7 @@ from terminal. Note that `Julia` needs to be in your path for this to work.
 ## Contribution
 
 Pull requests are encouraged!
+
+## Paper
+
+A full description of the methods used can be found (https://github.com/lvb5/senior_project_paper/blob/master/main.pdf)[in this paper]
