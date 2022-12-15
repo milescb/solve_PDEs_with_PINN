@@ -1,6 +1,6 @@
 # Solving PDEs with Physics-Informed Neural Networks 
 
-The following repository contains examples using Physics-Informed Neural Networks (PINN) to solve PDEs. We use the package `NeuralPDE.jl` to solve. 
+The following repository contains examples using Physics-Informed Neural Networks (PINN) to solve PDEs. We use the package `NeuralPDE.jl` to solve. This work is part of my senior capstone for Lawrence University in Appleton, WI. I have documented the techniques used here along with appropriate background information [in this paper](https://github.com/lvb5/senior_project_paper/blob/master/main.pdf). 
 
 ## List of examples
 
@@ -30,7 +30,3 @@ from terminal. Note that `Julia` needs to be in your path for this to work.
 ## Contribution
 
 Pull requests are encouraged!
-
-## Paper
-
-A full description of the methods used can be found [in this paper](https://github.com/lvb5/senior_project_paper/blob/master/main.pdf). 
