@@ -21,6 +21,7 @@ import ModelingToolkit: Interval, infimum, supremum
 using Plots, JLD2
 
 include("../utils/general_utils.jl")
+include("../utils/rk4.jl")
 
 # constants for problem
 include("constants.jl")
@@ -52,22 +53,26 @@ domains = [r ∈ Interval(r_min, r_max)]
 
 # -------------------------------------------------------------------------------------
 # Solve for Newtonian Gravity!
-function newton_gravity(ddu,du,u,p,t)
-    r_sqrd = (u[1]^2 + u[2]^2)
-    ddu[1] = -GM*u[1]/(r_sqrd^1.5)
-    ddu[2] = -GM*u[2]/(r_sqrd^1.5)
+# input in form [x,dx,y,dy]
+# output in form [dx, ddx, dy, ddy]
+function newton_gravity(t,u)
+    r_sqrd = (u[1]*u[1] + u[3]*u[3])
+    du = [0.,0.,0.,0.]
+    du[1] = u[2]
+    du[2] = -GM*u[1]/(r_sqrd^1.5)
+    du[3] = u[4]
+    du[4] = -GM*u[3]/(r_sqrd^1.5)
+    return du
 end
 
 # initial conditions
 x0 = [15.f0, 0.f0] # units of AU
 dx0 = [0.f0, 100.f0] # units of AU/yr
-tspan = (0.f0, 0.03f0)
+initial_conditions = [x0[1],dx0[1],x0[2],dx0[2]]
+nPoints = 20
 
-# solve problem
-dx = 0.0025f0
-prob_newton = SecondOrderODEProblem(newton_gravity, dx0, x0, tspan)
-@time sol_newton = solve(prob_newton, Tsit5(), dt=dx, saveat=dx);
-sol_nts = [[sol_newton[i][3], sol_newton[i][4]] for i in eachindex(sol_newton)]
+sol_newton = runge_kutta4(newton_gravity,0.0,1.0,initial_conditions,nPoints)
+sol_nts = [[sol_newton[i][2][1], sol_newton[i][2][3]] for i in eachindex(sol_newton)]
 
 plot(getindex.(sol_nts,1),getindex.(sol_nts,2), label="", size=(400,400), dpi=200,
         xlabel="\$x\$ (AU)", ylabel="\$y\$ (AU)");

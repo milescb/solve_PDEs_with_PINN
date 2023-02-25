@@ -38,17 +38,19 @@ Parameters:
 function additional_loss(phi, θ, p)
 
     # set-up the problem using current metric
-    function simple_geodesic(ddu,du,u,p,t)
+    function simple_geodesic(t,u)
         # take derivative with Zygote
-        grad = Zygote.gradient((x,y) -> g00(x,y,phi,θ), u[1], u[2])
-        ddu[1] = -(c^2/2) * grad[1]
-        ddu[2] = -(c^2/2) * grad[2]
+        grad = Zygote.gradient((x,y) -> g00(x,y,phi,θ), u[1], u[3])
+        du = [0.,0.,0.,0.]
+        du[1] = u[2]
+        du[2] = -(c^2/2) * grad[1]
+        du[3] = u[4]
+        du[2] = -(c^2/2) * grad[2]
     end
 
     # solve system of diff-eqs. `saveat` and `dt` keywords are required to
     # avoid costly interpolation. 
-    prob_ode = SecondOrderODEProblem(simple_geodesic, dx0, x0, tspan)
-    sol = solve(prob_ode, Tsit5(), saveat=dx, dt=dx)
+    sol = runge_kutta4(simple_geodesic,0.0,1.0,initial_conditions,nPoints)
 
     # hack to avoid differing lengths when warning dt <= dtmin
     # usually not used / necessary 
